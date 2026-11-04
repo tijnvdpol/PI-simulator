@@ -37,6 +37,7 @@ export class PythonEngine {
     if (this.status !== 'klaar' || !this.worker) return
     this.o.state.resetOutputs()
     this.o.state.resetButtons()
+    this.o.state.resetDisplay()
     this.setStatus('draait')
     this.worker.postMessage({ type: 'run', code })
   }
@@ -45,6 +46,7 @@ export class PythonEngine {
     this.worker?.terminate()
     this.o.state.resetOutputs()
     this.o.state.resetButtons()
+    this.o.state.resetDisplay()
     this.spawn()
   }
 

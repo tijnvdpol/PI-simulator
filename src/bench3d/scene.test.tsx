@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Part } from '../project/types'
 import { Scene, type SceneProps } from './Scene'
 
-const led: Part = { id: 'part-1', kind: 'led', x: 300, y: 130, color: 'red', connection: { type: 'pin', physical: 11 } }
-const temp: Part = { id: 'part-2', kind: 'temperature', x: 600, y: 130, connection: { type: 'adc', channel: 0 } }
+const led: Part = { id: 'part-1', kind: 'led', x: 300, y: 130, color: 'red', connections: { signal: { type: 'pin', physical: 11 } } }
+const temp: Part = { id: 'part-2', kind: 'temperature', x: 600, y: 130, connections: { signal: { type: 'adc', channel: 0 } } }
 
 const base = (over: Partial<SceneProps> = {}): SceneProps => ({
   parts: [], live: () => ({}), selectedId: null, locked: false, usedChannels: [], view: null,

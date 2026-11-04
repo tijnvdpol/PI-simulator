@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { benchWarnings } from './warnings'
 import type { Part } from '../project/types'
 
-const led = (physical: number): Part => ({ id: 'a', kind: 'led', x: 0, y: 0, connection: { type: 'pin', physical } })
+const led = (physical: number): Part => ({ id: 'a', kind: 'led', x: 0, y: 0, connections: { signal: { type: 'pin', physical } } })
 
 describe('benchWarnings', () => {
   it('5V, GND en 3V3 geven een waarschuwing met uitleg', () => {
@@ -13,7 +13,7 @@ describe('benchWarnings', () => {
   })
   it('GPIO-pin geeft geen waarschuwing; onverbonden en ADC ook niet', () => {
     expect(benchWarnings([led(11)])).toEqual([])
-    expect(benchWarnings([{ id: 'b', kind: 'led', x: 0, y: 0, connection: null }])).toEqual([])
-    expect(benchWarnings([{ id: 'c', kind: 'potentiometer', x: 0, y: 0, connection: { type: 'adc', channel: 1 } }])).toEqual([])
+    expect(benchWarnings([{ id: 'b', kind: 'led', x: 0, y: 0, connections: {} }])).toEqual([])
+    expect(benchWarnings([{ id: 'c', kind: 'potentiometer', x: 0, y: 0, connections: { signal: { type: 'adc', channel: 1 } } }])).toEqual([])
   })
 })

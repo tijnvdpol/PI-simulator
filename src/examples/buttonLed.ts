@@ -1,11 +1,11 @@
 import type { Project } from '../project/types'
 
 export const buttonLed: Project = {
-  version: 1,
+  version: 2,
   name: 'Knop schakelt led',
   parts: [
-    { id: 'part-1', kind: 'led', x: 380, y: 140, color: 'green', connection: { type: 'pin', physical: 11 } },
-    { id: 'part-2', kind: 'button', x: 520, y: 140, connection: { type: 'pin', physical: 13 } },
+    { id: 'part-1', kind: 'led', x: 380, y: 140, color: 'green', connections: { signal: { type: 'pin', physical: 11 } } },
+    { id: 'part-2', kind: 'button', x: 520, y: 140, connections: { signal: { type: 'pin', physical: 13 } } },
   ],
   code: `from gpiozero import LED, Button
 from signal import pause

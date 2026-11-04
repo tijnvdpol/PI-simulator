@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { benchWarnings } from '../bench/warnings'
+import { terminalsOf } from '../bench/terminals'
 import { celsiusToRaw } from '../bench/liveControls'
 import { createHarness, type Harness } from '../engine/testing/pythonHarness'
 import { parseProject, serializeProject } from '../project/parse'
@@ -18,7 +19,7 @@ describe('voorbeeldprojecten', () => {
   it.each(EXAMPLES.map((e) => [e.id, e] as const))('%s: geldig project, alles verbonden, geen waarschuwingen', (_id, e) => {
     expect(parseProject(JSON.parse(serializeProject(e.project)))).toEqual({ ok: true, value: e.project })
     expect(e.project.parts.length).toBeGreaterThan(0)
-    expect(e.project.parts.every((p) => p.connection !== null)).toBe(true)
+    expect(e.project.parts.every((p) => Object.keys(p.connections).length === terminalsOf(p.kind).length)).toBe(true)
     expect(benchWarnings(e.project.parts)).toEqual([])
     expect(new Set(e.project.parts.map((p) => p.id)).size).toBe(e.project.parts.length)
   })

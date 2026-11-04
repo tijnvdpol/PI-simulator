@@ -23,7 +23,7 @@ export function useProject(initial?: Project) {
   const [code, setCode] = useState(initial?.code ?? STARTER_CODE)
   const [name, setName] = useState(initial?.name ?? 'Mijn project')
 
-  const project: Project = useMemo(() => ({ version: 1, name, parts: bench.parts, code }), [name, bench.parts, code])
+  const project: Project = useMemo(() => ({ version: 2, name, parts: bench.parts, code }), [name, bench.parts, code])
 
   const load = useCallback((p: Project) => {
     dispatch({ type: 'load', parts: p.parts })

@@ -1,11 +1,11 @@
 import type { Project } from '../project/types'
 
 export const tempAlarm: Project = {
-  version: 1,
+  version: 2,
   name: 'Temperatuuralarm',
   parts: [
-    { id: 'part-1', kind: 'temperature', x: 300, y: 130, connection: { type: 'adc', channel: 0 } },
-    { id: 'part-2', kind: 'buzzer', x: 640, y: 140, connection: { type: 'pin', physical: 15 } },
+    { id: 'part-1', kind: 'temperature', x: 300, y: 130, connections: { signal: { type: 'adc', channel: 0 } } },
+    { id: 'part-2', kind: 'buzzer', x: 640, y: 140, connections: { signal: { type: 'pin', physical: 15 } } },
   ],
   code: `from gpiozero import MCP3008, Buzzer
 from time import sleep

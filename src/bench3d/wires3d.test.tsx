@@ -17,7 +17,7 @@ beforeAll(() => {
 })
 
 const led = (x: number, y: number, physical: number | null, id = 'part-1'): Part => ({
-  id, kind: 'led', x, y, color: 'red', connection: physical === null ? null : { type: 'pin', physical },
+  id, kind: 'led', x, y, color: 'red', connections: physical === null ? {} : { signal: { type: 'pin', physical } },
 })
 
 describe('draadeinden', () => {
@@ -36,7 +36,7 @@ describe('draadeinden', () => {
   })
 
   it('analoge onderdelen eindigen op het chipkanaal', () => {
-    const parts: Part[] = [{ id: 'part-1', kind: 'temperature', x: 600, y: 150, connection: { type: 'adc', channel: 3 } }]
+    const parts: Part[] = [{ id: 'part-1', kind: 'temperature', x: 600, y: 150, connections: { signal: { type: 'adc', channel: 3 } } }]
     const w = computeWires(parts).find((x) => x.id === 'part-1:signal')!
     const e = wireEnds(w, parts)!
     const [dx, dy, dz] = chipChannelLocal(3)
@@ -46,7 +46,7 @@ describe('draadeinden', () => {
   })
 
   it('chipdraden (SPI) beginnen op de chip en eindigen op de juiste Pi-pin', () => {
-    const parts: Part[] = [{ id: 'part-1', kind: 'temperature', x: 600, y: 150, connection: { type: 'adc', channel: 0 } }]
+    const parts: Part[] = [{ id: 'part-1', kind: 'temperature', x: 600, y: 150, connections: { signal: { type: 'adc', channel: 0 } } }]
     const mosi = computeWires(parts).find((w) => w.label === 'MOSI')!
     const e = wireEnds(mosi, parts)!
     const pin = pinWorld(19)

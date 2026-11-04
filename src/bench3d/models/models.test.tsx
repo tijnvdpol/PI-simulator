@@ -19,7 +19,7 @@ import { readPalette } from '../palette'
 
 beforeAll(() => { document.documentElement.style.setProperty('--color-led-green', 'lime') })
 
-const part = (kind: PartKind, extra: Partial<Part> = {}): Part => ({ id: 'p1', kind, x: 0, y: 0, connection: null, ...extra })
+const part = (kind: PartKind, extra: Partial<Part> = {}): Part => ({ id: 'p1', kind, x: 0, y: 0, connections: {}, ...extra })
 
 const find = (root: Object3D, name: string) => root.getObjectByName(name)!
 const meshes = (root: Object3D) => { const out: Mesh[] = []; root.traverse((o) => { if ((o as Mesh).isMesh) out.push(o as Mesh) }); return out }

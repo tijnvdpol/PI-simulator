@@ -13,7 +13,7 @@ describe('isDirty', () => {
     const base = serializeProject(proj)
     expect(isDirty(base, proj)).toBe(false)
     expect(isDirty(base, { ...proj, code: 'print(2)' })).toBe(true)
-    expect(isDirty(base, { ...proj, parts: [{ id: 'a', kind: 'led', x: 0, y: 0, connection: null }] })).toBe(true)
+    expect(isDirty(base, { ...proj, parts: [{ id: 'a', kind: 'led', x: 0, y: 0, connections: {} }] })).toBe(true)
   })
 })
 

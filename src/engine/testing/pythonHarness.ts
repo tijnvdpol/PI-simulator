@@ -3,6 +3,7 @@ import { resolve } from 'node:path'
 import { HardwareState, type HardwareBridge, type PinWarning } from '../hardwareState'
 import { bootPython } from '../boot'
 import type { Part, PartKind } from '../../project/types'
+import { PILLOW_WHEEL } from '../pillow'
 
 export interface RunError { type: string; message: string; line: number | null; traceback: string }
 export type RunOutcome = { error: null } | { error: RunError }
@@ -13,6 +14,9 @@ export class FakeBridge implements HardwareBridge {
   t: number
   limit = Infinity
   outputs = new Map<number, { t: number; level: number }[]>()
+  servos = new Map<number, { t: number; position: number | null }[]>()
+  /** Elk beeld dat het (nep-)OLED kreeg, met het tijdstip. */
+  frames: { t: number; data: Uint8Array }[] = []
   warnings: { code: string; info: PinWarning }[] = []
   private events: { at: number; fn: () => void }[] = []
 
@@ -41,6 +45,24 @@ export class FakeBridge implements HardwareBridge {
     this.outputs.set(g, h)
   }
   readAdc(c: number) { return this.state.getAdcRaw(c) }
+  readDistance(g: number) { return this.state.getDistanceCm(g) }
+  writeServo(g: number, position: number | null) {
+    this.state.setServo(g, position)
+    const h = this.servos.get(g) ?? []
+    h.push({ t: this.t, position })
+    this.servos.set(g, h)
+  }
+  servoHistory(g: number) { return this.servos.get(g) ?? [] }
+  i2cPresent(address: number) { return this.state.i2cPresent(address) }
+  writeDisplay(bytes: Uint8Array) { this.state.setDisplay(bytes); this.frames.push({ t: this.t, data: new Uint8Array(bytes) }) }
+  setDisplayOn(on: boolean) { this.state.setDisplayOn(on) }
+  setContrast(level: number) { this.state.setContrast(level) }
+  /** Pixel (x, y) van het laatste beeld: true = aan. */
+  pixel(x: number, y: number): boolean {
+    const d = this.state.getDisplay()
+    return ((d[y * 16 + (x >> 3)] >> (7 - (x & 7))) & 1) === 1
+  }
+  litPixels(): number { return this.state.getDisplay().reduce((n, b) => n + b.toString(2).replace(/0/g, '').length, 0) }
   warn(code: 'pin-unconnected' | 'pin-wrong-kind', info: PinWarning) { this.warnings.push({ code, info }) }
 }
 
@@ -63,13 +85,23 @@ const delegate: HardwareBridge = {
   readButton: (g) => current.readButton(g),
   writeOutput: (g, l) => current.writeOutput(g, l),
   readAdc: (c) => current.readAdc(c),
+  readDistance: (g) => current.readDistance(g),
+  writeServo: (g, p) => current.writeServo(g, p),
+  i2cPresent: (a) => current.i2cPresent(a),
+  writeDisplay: (b) => current.writeDisplay(b),
+  setDisplayOn: (on) => current.setDisplayOn(on),
+  setContrast: (l) => current.setContrast(l),
   warn: (code, info) => current.warn(code, info),
 }
 
 /** Pyodide laadt één keer per testbestand; elke harnas krijgt een eigen brug en schone Python-toestand. */
 export async function createHarness(opts: { t0?: number } = {}): Promise<Harness> {
   if (!pyodidePromise) {
-    pyodidePromise = loadPyodide({ indexURL: resolve('node_modules/pyodide') + '/' }).then((p) => { bootPython(p, delegate); return p })
+    pyodidePromise = loadPyodide({ indexURL: resolve('node_modules/pyodide') + '/' }).then(async (p) => {
+      await p.loadPackage(resolve('vendor/pyodide', PILLOW_WHEEL)) // Pillow, voor ImageDraw (zelfde wheel als in de app)
+      bootPython(p, delegate)
+      return p
+    })
   }
   const pyodide = await pyodidePromise
   const bridge = new FakeBridge(opts.t0 ?? 0)
@@ -96,6 +128,6 @@ export async function createHarness(opts: { t0?: number } = {}): Promise<Harness
 
 let nextId = 0
 /** Onderdeel op een fysieke pin, voor tests. */
-export const onPin = (kind: PartKind, physical: number): Part => ({ id: `t${nextId++}`, kind, x: 0, y: 0, connection: { type: 'pin', physical } })
+export const onPin = (kind: PartKind, physical: number): Part => ({ id: `t${nextId++}`, kind, x: 0, y: 0, connections: { signal: { type: 'pin', physical } } })
 /** Onderdeel op een ADC-kanaal, voor tests. */
-export const onChannel = (kind: PartKind, channel: number): Part => ({ id: `t${nextId++}`, kind, x: 0, y: 0, connection: { type: 'adc', channel } })
+export const onChannel = (kind: PartKind, channel: number): Part => ({ id: `t${nextId++}`, kind, x: 0, y: 0, connections: { signal: { type: 'adc', channel } } })

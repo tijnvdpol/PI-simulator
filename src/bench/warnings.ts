@@ -8,7 +8,7 @@ export interface BenchWarning { partId: string; physical: number; message: strin
 export function benchWarnings(parts: Part[]): BenchWarning[] {
   const out: BenchWarning[] = []
   for (const part of parts) {
-    const c = part.connection
+    const c = part.connections.signal
     if (!c || c.type !== 'pin') continue
     const pin = pinByPhysical(c.physical)
     if (pin.kind === '5v' || pin.kind === '3v3' || pin.kind === 'gnd') {

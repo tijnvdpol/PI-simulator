@@ -1,13 +1,27 @@
-import { CURRENT_VERSION, LED_COLORS, PART_KINDS, type Connection, type LedColor, type Part, type PartKind, type Project, type Result } from './types'
+import { PART_NAMES_NL } from '../bench/names'
+import { terminalsOf } from '../bench/terminals'
+import { CURRENT_VERSION, LED_COLORS, PART_KINDS, type Connection, type Connections, type LedColor, type Part, type PartKind, type Project, type Result } from './types'
 
 const fail = (error: string): { ok: false; error: string } => ({ ok: false, error })
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
 
 /**
- * Migraties van oudere versies naar de huidige. Versie 1 is de eerste, dus nog leeg;
- * een toekomstige versie 2 voegt hier `1: (raw) => ({ ...raw, version: 2 })` toe.
+ * Migraties van oudere versies naar de huidige; elke stap tilt het bestand één versie op en wijzigt de invoer niet.
+ * 1 → 2 (fase 2): een onderdeel kan meerdere aansluitingen hebben. `connection` wordt `connections.signal`.
  */
-const migrations: Record<number, (raw: Record<string, unknown>) => Record<string, unknown>> = {}
+const migrations: Record<number, (raw: Record<string, unknown>) => Record<string, unknown>> = {
+  1: (raw) => ({
+    ...raw,
+    version: 2,
+    parts: Array.isArray(raw.parts)
+      ? raw.parts.map((p) => {
+          if (!isObj(p)) return p
+          const { connection, ...rest } = p
+          return { ...rest, connections: isObj(connection) ? { signal: connection } : {} }
+        })
+      : raw.parts,
+  }),
+}
 
 function parseConnection(raw: unknown): Result<Connection | null> {
   if (raw === null) return { ok: true, value: null }
@@ -26,9 +40,21 @@ function parsePart(raw: unknown): Result<Part> {
   if (typeof raw.id !== 'string') return fail('Een onderdeel mist een id.')
   if (!PART_KINDS.includes(raw.kind as PartKind)) return fail(`Onbekend onderdeel: ${String(raw.kind)}.`)
   if (typeof raw.x !== 'number' || typeof raw.y !== 'number') return fail('Een onderdeel mist een positie.')
-  const conn = parseConnection(raw.connection === undefined ? null : raw.connection)
-  if (!conn.ok) return conn
-  const part: Part = { id: raw.id, kind: raw.kind as PartKind, x: raw.x, y: raw.y, connection: conn.value }
+  const kind = raw.kind as PartKind
+  const connections: Connections = {}
+  const given = raw.connections === undefined ? {} : raw.connections
+  if (!isObj(given)) return fail('Een onderdeel heeft ongeldige aansluitingen.')
+  const specs = terminalsOf(kind)
+  for (const [terminal, value] of Object.entries(given)) {
+    const spec = specs.find((t) => t.id === terminal)
+    if (!spec) return fail(`Een ${PART_NAMES_NL[kind]} heeft geen aansluiting "${terminal}".`)
+    const conn = parseConnection(value)
+    if (!conn.ok) return conn
+    if (conn.value === null) continue
+    if ((spec.type === 'adc') !== (conn.value.type === 'adc')) return fail(`De aansluiting "${terminal}" van een ${PART_NAMES_NL[kind]} zit op de verkeerde soort plek.`)
+    connections[terminal] = conn.value
+  }
+  const part: Part = { id: raw.id, kind, x: raw.x, y: raw.y, connections }
   if (raw.color !== undefined) {
     if (!LED_COLORS.includes(raw.color as LedColor)) return fail('Een led heeft een onbekende kleur.')
     part.color = raw.color as LedColor

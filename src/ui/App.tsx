@@ -192,7 +192,7 @@ function Simulator() {
             issues={issues}
             live={(part) => live[part.id] ?? {}}
             onPartPress={(part, pressed) => {
-              const c = part.connection
+              const c = part.connections.signal
               if (c?.type === 'pin') {
                 const g = pinByPhysical(c.physical).gpio
                 if (g !== null) hw.setButtonPressed(g, pressed)

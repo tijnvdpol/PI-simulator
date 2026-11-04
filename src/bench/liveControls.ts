@@ -19,13 +19,14 @@ export function syncAnalog(state: HardwareState, parts: Part[], values: Record<s
   // Eerst de eindwaarden bepalen, dan elk kanaal één keer schrijven: een tussenstand 0 zou een lopend programma kunnen lezen.
   const target = new Array<number>(ADC_CHANNELS).fill(0)
   for (const p of parts) {
-    if (p.connection?.type !== 'adc') continue
-    target[p.connection.channel] = rawFor(p, values[p.id] ?? defaultSensorValue(p.kind))
+    const c = p.connections.signal
+    if (c?.type !== 'adc') continue
+    target[c.channel] = rawFor(p, values[p.id] ?? defaultSensorValue(p.kind))
   }
   target.forEach((raw, c) => state.setAdcRaw(c, raw))
 }
 
-const gpioOf = (p: Part): number | null => (p.connection?.type === 'pin' ? pinByPhysical(p.connection.physical).gpio : null)
+const gpioOf = (p: Part): number | null => { const c = p.connections.signal; return c?.type === 'pin' ? pinByPhysical(c.physical).gpio : null }
 
 /** Wat de werkbank nu moet tonen, gelezen uit het gedeelde geheugen. */
 export function snapshot(state: HardwareState, parts: Part[], values: Record<string, number>): Record<string, PartLive> {

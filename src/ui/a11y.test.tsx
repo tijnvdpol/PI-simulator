@@ -30,7 +30,7 @@ describe('defaultDropPosition', () => {
       expect(p.y).toBeGreaterThan(0); expect(p.y).toBeLessThan(VIEW_H)
       expect(p.x < 410 || p.x > 600).toBe(true) // niet op de MCP3008-chip (x 430–580)
       seen.add(`${p.x},${p.y}`)
-      parts.push({ id: `p${i}`, kind: 'led', x: p.x, y: p.y, connection: null })
+      parts.push({ id: `p${i}`, kind: 'led', x: p.x, y: p.y, connections: {} })
     }
     expect(seen.size).toBe(8)
   })

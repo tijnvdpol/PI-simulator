@@ -7,9 +7,9 @@ import type { Part } from '../project/types'
 import { PartList } from './PartList'
 import { PinMenu } from './PinMenu'
 
-const led: Part = { id: 'part-1', kind: 'led', x: 100, y: 100, color: 'red', connection: null }
-const buzzer: Part = { id: 'part-2', kind: 'buzzer', x: 200, y: 100, connection: { type: 'pin', physical: 15 } }
-const temp: Part = { id: 'part-3', kind: 'temperature', x: 300, y: 100, connection: null }
+const led: Part = { id: 'part-1', kind: 'led', x: 100, y: 100, color: 'red', connections: {} }
+const buzzer: Part = { id: 'part-2', kind: 'buzzer', x: 200, y: 100, connections: { signal: { type: 'pin', physical: 15 } } }
+const temp: Part = { id: 'part-3', kind: 'temperature', x: 300, y: 100, connections: {} }
 
 const menu = (part: Part, parts: Part[], onPick = vi.fn(), onClose = vi.fn()) => {
   const targets = selectableTargets({ parts, connecting: part.id, error: null }, part.id)
@@ -53,7 +53,7 @@ describe('PinMenu', () => {
   })
 
   it('analoge onderdelen krijgen een lijst met de kanalen CH0–CH7; een bezet kanaal is uit', () => {
-    const other: Part = { ...temp, id: 'part-9', connection: { type: 'adc', channel: 2 } }
+    const other: Part = { ...temp, id: 'part-9', connections: { signal: { type: 'adc', channel: 2 } } }
     const { onPick } = menu(temp, [temp, other])
     expect(screen.queryByRole('group', { name: 'Pinnen van de Pi' })).toBeNull()
     expect(screen.getByRole('button', { name: 'CH2' })).toBeDisabled()

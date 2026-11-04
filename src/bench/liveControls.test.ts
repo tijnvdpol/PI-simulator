@@ -3,7 +3,7 @@ import { HardwareState } from '../engine/hardwareState'
 import type { Part } from '../project/types'
 import { celsiusToRaw, defaultSensorValue, positionToRaw, snapshot, syncAnalog } from './liveControls'
 
-const part = (over: Partial<Part> & Pick<Part, 'id' | 'kind'>): Part => ({ x: 0, y: 0, connection: null, ...over })
+const part = (over: Partial<Part> & Pick<Part, 'id' | 'kind'>): Part => ({ x: 0, y: 0, connections: {}, ...over })
 
 describe('liveControls', () => {
   it('25 °C is raw ≈ 232,5 (0,75 V op 3,3 V)', () => {
@@ -24,8 +24,8 @@ describe('liveControls', () => {
     const s = new HardwareState()
     s.setAdcRaw(5, 999)
     syncAnalog(s, [
-      part({ id: 'a', kind: 'temperature', connection: { type: 'adc', channel: 0 } }),
-      part({ id: 'b', kind: 'potentiometer', connection: { type: 'adc', channel: 3 } }),
+      part({ id: 'a', kind: 'temperature', connections: { signal: { type: 'adc', channel: 0 } } }),
+      part({ id: 'b', kind: 'potentiometer', connections: { signal: { type: 'adc', channel: 3 } } }),
     ], { a: 25, b: 1 })
     expect(s.getAdcRaw(0)).toBe(celsiusToRaw(25))
     expect(s.getAdcRaw(3)).toBe(1023)
@@ -33,7 +33,7 @@ describe('liveControls', () => {
   })
   it('syncAnalog gebruikt defaults als er geen waarde is', () => {
     const s = new HardwareState()
-    syncAnalog(s, [part({ id: 'a', kind: 'temperature', connection: { type: 'adc', channel: 1 } })], {})
+    syncAnalog(s, [part({ id: 'a', kind: 'temperature', connections: { signal: { type: 'adc', channel: 1 } } })], {})
     expect(s.getAdcRaw(1)).toBe(celsiusToRaw(20))
   })
   it('snapshot leest led-niveau, knop en sensorwaarden', () => {
@@ -41,10 +41,10 @@ describe('liveControls', () => {
     s.setOutput(17, 1)
     s.setButtonPressed(27, true)
     const snap = snapshot(s, [
-      part({ id: 'l', kind: 'led', connection: { type: 'pin', physical: 11 } }),
-      part({ id: 'k', kind: 'button', connection: { type: 'pin', physical: 13 } }),
-      part({ id: 't', kind: 'temperature', connection: { type: 'adc', channel: 0 } }),
-      part({ id: 'z', kind: 'buzzer', connection: { type: 'pin', physical: 2 } }),
+      part({ id: 'l', kind: 'led', connections: { signal: { type: 'pin', physical: 11 } } }),
+      part({ id: 'k', kind: 'button', connections: { signal: { type: 'pin', physical: 13 } } }),
+      part({ id: 't', kind: 'temperature', connections: { signal: { type: 'adc', channel: 0 } } }),
+      part({ id: 'z', kind: 'buzzer', connections: { signal: { type: 'pin', physical: 2 } } }),
     ], { t: 30 })
     expect(snap.l.level).toBe(1)
     expect(snap.k.pressed).toBe(true)
@@ -59,7 +59,7 @@ describe('syncAnalog schrijft nooit een tussenwaarde 0 (kort "−50 °C" in een 
     const writes: [number, number][] = []
     const orig = s.setAdcRaw.bind(s)
     s.setAdcRaw = (c, raw) => { writes.push([c, raw]); orig(c, raw) }
-    syncAnalog(s, [part({ id: 'a', kind: 'temperature', connection: { type: 'adc', channel: 0 } })], { a: 25 })
+    syncAnalog(s, [part({ id: 'a', kind: 'temperature', connections: { signal: { type: 'adc', channel: 0 } } })], { a: 25 })
     expect(writes.filter(([c]) => c === 0)).toEqual([[0, celsiusToRaw(25)]])
     expect(writes).toHaveLength(8)
   })

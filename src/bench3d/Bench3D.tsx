@@ -41,7 +41,7 @@ export default function Bench3D({ parts, connecting, error, locked, dispatch, is
   const targets = connecting ? selectableTargets({ parts, connecting, error }, connecting) : null
   const connectingPart = parts.find((p) => p.id === connecting)
   const selectedPart = parts.find((p) => p.id === selected)
-  const usedChannels = useMemo(() => parts.flatMap((p) => (p.connection?.type === 'adc' ? [p.connection.channel] : [])), [parts])
+  const usedChannels = useMemo(() => parts.flatMap((p) => { const c = p.connections.signal; return c?.type === 'adc' ? [c.channel] : [] }), [parts])
 
   // Pinnen waar de code iets mee wil, maar waar niets op zit.
   const issuePins = useMemo(() => issues.flatMap((i) => {

@@ -1,4 +1,6 @@
 import { pinByPhysical } from '../pinout/pinout'
+import { isComplete } from '../bench/partStatus'
+import { terminalsOf } from '../bench/terminals'
 import { PART_KINDS, type Part, type PartKind } from '../project/types'
 
 export const GPIO_COUNT = 28
@@ -10,8 +12,19 @@ const KIND_CH = KIND_GPIO + GPIO_COUNT
 const BUTTON = KIND_CH + ADC_CHANNELS
 const OUTPUT = BUTTON + GPIO_COUNT
 const ADC = OUTPUT + GPIO_COUNT
-const SLEEP = ADC + ADC_CHANNELS
+const DIST = ADC + ADC_CHANNELS          // afstand in 0,1 cm per echo-pin (0 = geen echo)
+const SERVO = DIST + GPIO_COUNT          // 0 = ontkoppeld, anders stand*1000 + 1
+const I2C = SERVO + GPIO_COUNT           // 1 als er een bereikbaar OLED-scherm op adres 0x3C zit
+const DISPLAY_VERSION = I2C + 1
+const DISPLAY_ON = DISPLAY_VERSION + 1
+const CONTRAST = DISPLAY_ON + 1
+const DISPLAY = CONTRAST + 1             // 128 × 64 pixels, 1 bit per pixel: 256 woorden
+export const DISPLAY_BYTES = 128 * 64 / 8
+const DISPLAY_WORDS = DISPLAY_BYTES / 4
+const SLEEP = DISPLAY + DISPLAY_WORDS
 const TOTAL = SLEEP + 1
+
+export const OLED_ADDRESS = 0x3c
 
 const OUT_SCALE = 1000
 
@@ -31,15 +44,19 @@ export class HardwareState {
 
   setParts(parts: Part[]): void {
     this.a.fill(0, KIND_GPIO, KIND_CH + ADC_CHANNELS)
+    Atomics.store(this.a, I2C, 0)
     for (const p of parts) {
-      const c = p.connection
-      if (!c) continue
-      if (c.type === 'adc') {
-        Atomics.store(this.a, KIND_CH + c.channel, kindCode(p.kind))
-      } else {
-        const g = pinByPhysical(c.physical).gpio
-        if (g !== null) Atomics.store(this.a, KIND_GPIO + g, kindCode(p.kind))
+      for (const spec of terminalsOf(p.kind)) {
+        const c = p.connections[spec.id]
+        if (!c) continue
+        if (c.type === 'adc') {
+          Atomics.store(this.a, KIND_CH + c.channel, kindCode(p.kind))
+        } else if (spec.type === 'gpio') {
+          const g = pinByPhysical(c.physical).gpio
+          if (g !== null) Atomics.store(this.a, KIND_GPIO + g, kindCode(p.kind))
+        }
       }
+      if (p.kind === 'oled' && isComplete(p)) Atomics.store(this.a, I2C, 1)
     }
   }
 
@@ -63,7 +80,51 @@ export class HardwareState {
   }
   getAdcRaw(c: number): number { return Atomics.load(this.a, ADC + c) }
 
-  resetOutputs(): void { this.a.fill(0, OUTPUT, OUTPUT + GPIO_COUNT) }
+  setDistanceCm(g: number, cm: number): void { Atomics.store(this.a, DIST + g, Math.max(0, Math.round(cm * 10))) }
+  getDistanceCm(g: number): number { return Atomics.load(this.a, DIST + g) / 10 }
+
+  /** Servo-stand 0..1 (0 = helemaal links), of null voor "ontkoppeld". */
+  setServo(g: number, position: number | null): void {
+    Atomics.store(this.a, SERVO + g, position === null ? 0 : Math.round(Math.min(1, Math.max(0, position)) * OUT_SCALE) + 1)
+  }
+  getServo(g: number): number | null {
+    const v = Atomics.load(this.a, SERVO + g)
+    return v === 0 ? null : (v - 1) / OUT_SCALE
+  }
+
+  i2cPresent(address: number): boolean { return address === OLED_ADDRESS && Atomics.load(this.a, I2C) === 1 }
+
+  displayVersion(): number { return Atomics.load(this.a, DISPLAY_VERSION) }
+  /** Zet het beeld (1024 bytes, rij voor rij, 1 bit per pixel, hoogste bit links). Andere lengtes worden genegeerd. */
+  setDisplay(bytes: Uint8Array): void {
+    if (bytes.length !== DISPLAY_BYTES) return
+    for (let w = 0; w < DISPLAY_WORDS; w++) {
+      const i = w * 4
+      Atomics.store(this.a, DISPLAY + w, bytes[i] | (bytes[i + 1] << 8) | (bytes[i + 2] << 16) | (bytes[i + 3] << 24))
+    }
+    Atomics.add(this.a, DISPLAY_VERSION, 1)
+  }
+  getDisplay(): Uint8Array {
+    const out = new Uint8Array(DISPLAY_BYTES)
+    for (let w = 0; w < DISPLAY_WORDS; w++) {
+      const v = Atomics.load(this.a, DISPLAY + w)
+      out[w * 4] = v & 255; out[w * 4 + 1] = (v >> 8) & 255; out[w * 4 + 2] = (v >> 16) & 255; out[w * 4 + 3] = (v >>> 24) & 255
+    }
+    return out
+  }
+  resetDisplay(): void {
+    this.a.fill(0, DISPLAY, DISPLAY + DISPLAY_WORDS)
+    Atomics.store(this.a, DISPLAY_ON, 1)
+    Atomics.store(this.a, CONTRAST, 255)
+    Atomics.add(this.a, DISPLAY_VERSION, 1)
+  }
+  /** Staat standaard aan; de opslag is omgekeerd zodat een lege buffer "aan" betekent. */
+  displayOn(): boolean { return Atomics.load(this.a, DISPLAY_ON) !== 2 }
+  setDisplayOn(on: boolean): void { Atomics.store(this.a, DISPLAY_ON, on ? 1 : 2); Atomics.add(this.a, DISPLAY_VERSION, 1) }
+  contrast(): number { return Atomics.load(this.a, CONTRAST) }
+  setContrast(level: number): void { Atomics.store(this.a, CONTRAST, Math.min(255, Math.max(0, Math.round(level)))); Atomics.add(this.a, DISPLAY_VERSION, 1) }
+
+  resetOutputs(): void { this.a.fill(0, OUTPUT, OUTPUT + GPIO_COUNT); this.a.fill(0, SERVO, SERVO + GPIO_COUNT) }
   resetButtons(): void { this.a.fill(0, BUTTON, BUTTON + GPIO_COUNT) }
 
   /** Slaapt de aanroepende thread; alleen in de worker gebruiken. */
@@ -92,6 +153,12 @@ export interface HardwareBridge {
   readButton(g: number): boolean
   writeOutput(g: number, level: number): void
   readAdc(c: number): number
+  readDistance(g: number): number
+  writeServo(g: number, position: number | null): void
+  i2cPresent(address: number): boolean
+  writeDisplay(bytes: Uint8Array): void
+  setDisplayOn(on: boolean): void
+  setContrast(level: number): void
   warn(code: 'pin-unconnected' | 'pin-wrong-kind', info: PinWarning): void
 }
 
@@ -104,6 +171,12 @@ export function bridgeFromState(state: HardwareState, warn: HardwareBridge['warn
     readButton: (g) => state.isButtonPressed(g),
     writeOutput: (g, level) => state.setOutput(g, level),
     readAdc: (c) => state.getAdcRaw(c),
+    readDistance: (g) => state.getDistanceCm(g),
+    writeServo: (g, p) => state.setServo(g, p),
+    i2cPresent: (a) => state.i2cPresent(a),
+    writeDisplay: (b) => state.setDisplay(b),
+    setDisplayOn: (on) => state.setDisplayOn(on),
+    setContrast: (l) => state.setContrast(l),
     warn,
   }
 }

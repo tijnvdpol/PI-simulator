@@ -24,7 +24,7 @@ export function wireEnds(w: Wire, parts: Part[]): WireEnds | null {
     const part = parts.find((p) => p.id === id)
     if (!part) return null
     const anchors = PART_ANCHORS[part.kind]
-    a = add(partWorld(part), (w.kind === 'ground' ? anchors.ground : undefined) ?? anchors.signal)
+    a = add(partWorld(part), (w.terminal ? anchors.terminals?.[w.terminal] : undefined) ?? (w.kind === 'ground' ? anchors.ground : undefined) ?? anchors.signal)
   } else {
     a = add([CHIP_CENTER.x, 0, CHIP_CENTER.z], chipLabelLocal(w.label ?? 'VDD'))
   }

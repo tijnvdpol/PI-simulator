@@ -1,5 +1,6 @@
 import { SPI_PINS, nearestGnd, pinByPhysical } from '../pinout/pinout'
 import type { Part } from '../project/types'
+import { terminalsOf } from './terminals'
 
 export type WireColor = 'red' | 'black' | 'blue' | 'green' | 'yellow' | 'orange' | 'purple'
 
@@ -11,6 +12,8 @@ export interface Wire {
   color: WireColor
   /** Naam van de chip-aansluiting (MOSI, MISO, SCLK, CE0, VDD, GND) bij draden van de MCP3008. */
   label?: string
+  /** Aansluiting van het onderdeel waar deze draad aan zit (alleen bij onderdelen met meerdere aansluitingen). */
+  terminal?: string
 }
 
 const SIGNAL_COLORS: WireColor[] = ['blue', 'green', 'yellow', 'orange', 'purple']
@@ -23,7 +26,19 @@ export function computeWires(parts: Part[]): Wire[] {
   let signalIndex = 0
   let chip = false
   for (const part of parts) {
-    const c = part.connection
+    // Onderdelen met een eigen GND-aansluiting (en voeding) krijgen één draad per aansluiting.
+    if (terminalsOf(part.kind).some((t) => t.type === 'gnd')) {
+      for (const spec of terminalsOf(part.kind)) {
+        const conn = part.connections[spec.id]
+        if (!conn || conn.type !== 'pin') continue
+        const base = { id: `${part.id}:${spec.id}`, from: { part: part.id }, to: { physical: conn.physical }, terminal: spec.id }
+        if (spec.type === 'gpio') wires.push({ ...base, kind: 'signal', color: SIGNAL_COLORS[signalIndex++ % SIGNAL_COLORS.length] })
+        else if (spec.type === 'gnd') wires.push({ ...base, kind: 'ground', color: 'black' })
+        else wires.push({ ...base, kind: 'power', color: 'red' })
+      }
+      continue
+    }
+    const c = part.connections.signal
     if (!c) continue
     const color = SIGNAL_COLORS[signalIndex++ % SIGNAL_COLORS.length]
     if (c.type === 'adc') {

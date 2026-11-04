@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { buildShareUrl, decodeShare, encodeShare } from './share'
+import { FASE1_SHARE_HASH } from './fase1Fixtures'
+import { parseProject } from './parse'
+import { FASE1_JSON } from './fase1Fixtures'
 import type { Project } from './types'
 
 const p: Project = {
-  version: 1, name: 'Deel', code: 'from gpiozero import LED\nLED(17).on()\n',
-  parts: [{ id: 'a', kind: 'led', x: 1, y: 2, color: 'red', connection: { type: 'pin', physical: 11 } }],
+  version: 2, name: 'Deel', code: 'from gpiozero import LED\nLED(17).on()\n',
+  parts: [{ id: 'a', kind: 'led', x: 1, y: 2, color: 'red', connections: { signal: { type: 'pin', physical: 11 } } }],
 }
 
 describe('deellink', () => {
@@ -33,5 +36,11 @@ describe('deellink', () => {
     const r = decodeShare(`#p=${e}`)
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.error).toContain('nieuwere versie')
+  })
+  it('een deellink uit fase 1 opent automatisch en geeft hetzelfde project als de omgezette JSON', () => {
+    const r = decodeShare(FASE1_SHARE_HASH)
+    expect(r.ok).toBe(true)
+    expect(r).toEqual(parseProject(FASE1_JSON))
+    if (r.ok) expect(r.value.parts[0].connections.signal).toEqual({ type: 'pin', physical: 11 })
   })
 })
