@@ -19,6 +19,8 @@ const GL_ARGS = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-s
 const SHOTS = process.env.SMOKE_SHOTS
 const browser = await chromium.launch({ args: GL_ARGS })
 const page = await browser.newPage({ viewport: { width: 1440, height: 860 } })
+// Software-WebGL (SwiftShader) is te traag voor de zware nabewerking; de rooktest test gedrag, dus start in de stand Laag.
+await page.addInitScript(() => { try { localStorage.setItem('pisim.quality', 'low') } catch { /* geen opslag */ } })
 const shot = (name) => SHOTS ? page.screenshot({ path: `${SHOTS}/${name}.png` }) : Promise.resolve()
 const pageErrors = []
 page.on('pageerror', (e) => pageErrors.push(e.message))
