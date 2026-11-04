@@ -24,7 +24,7 @@ function AutoQuality() {
 
 /**
  * Nabewerking in de stand Hoog: ambient occlusion (SSAO; N8AO crasht met three 0.187) voor diepte in gaatjes en tussen onderdelen, bloom die alleen
- * oplicht wat helderder is dan wit (de leds), een lichte scherptediepte en ACES-tone mapping. In Laag tekent de renderer
+ * oplicht wat veel helderder is dan wit (de brandende leds; die krijgen daarvoor een emissive boven de drempel), een lichte scherptediepte en ACES-tone mapping. In Laag tekent de renderer
  * zelf met ACES en is er niets van dit alles.
  */
 export function Effects({ focus }: { focus: [number, number, number] }) {
@@ -38,7 +38,7 @@ export function Effects({ focus }: { focus: [number, number, number] }) {
     <>
       <EffectComposer enableNormalPass multisampling={4}>
         <SSAO samples={31} rings={6} radius={0.06} intensity={11} luminanceInfluence={0.5} bias={0.02} worldDistanceThreshold={80} worldDistanceFalloff={30} worldProximityThreshold={4} worldProximityFalloff={2} />
-        <Bloom mipmapBlur luminanceThreshold={1} luminanceSmoothing={0.2} intensity={0.9} radius={0.7} />
+        <Bloom mipmapBlur luminanceThreshold={1.5} luminanceSmoothing={0.25} intensity={0.9} radius={0.7} />
         <DepthOfField target={focusPoint} focusRange={110} bokehScale={2.2} height={540} />
         <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
       </EffectComposer>

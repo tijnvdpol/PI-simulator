@@ -20,7 +20,7 @@ export const PRO_VIEWS: Record<ViewName, CameraView> = {
 
 export const PRO_LIMITS: CameraLimits = {
   minDistance: 12,
-  maxDistance: 520,
+  maxDistance: 480,
   minPolarAngle: 0,
   maxPolarAngle: Math.PI / 2 - 0.06,
   target: { x: [cx - 130, cx + 130], y: [0, 20], z: [cz - 70, cz + 70] },

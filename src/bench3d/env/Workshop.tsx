@@ -11,8 +11,9 @@ export const HDRI_URL = `${ASSETS}/env/carpentry_shop_02_1k.hdr`
 const WOOD = { diff: `${ASSETS}/tex/wood_diff.webp`, rough: `${ASSETS}/tex/wood_rough.webp`, normal: `${ASSETS}/tex/wood_nor_gl.webp` }
 
 /** Maten van het werkbankblad en de muur erachter (mm). */
-export const BENCH = { w: 860, d: 480, thickness: 38 }
-const WALL = { w: 1100, h: 420 }
+/** Het blad is zo groot dat je de rand nooit ziet: ruim voorbij waar de camera heen kan. Achterrand = 240 mm achter het midden van de mat. */
+export const BENCH = { w: 1500, d: 780, thickness: 38, back: 240 }
+const WALL = { w: 1500, h: 420 }
 
 function Part({ pos, size, color, rough = 0.6, metal = 0, rot, name }: { pos: [number, number, number]; size: [number, number, number]; color: PaletteToken; rough?: number; metal?: number; rot?: [number, number, number]; name?: string }) {
   const p = usePalette()
@@ -38,7 +39,7 @@ function Cyl({ pos, r, h, color, rough = 0.6, metal = 0, rot, seg = 20, r2 }: { 
 function WoodTop({ cx, cz }: { cx: number; cz: number }) {
   const [diff, rough, normal] = useTexture([WOOD.diff, WOOD.rough, WOOD.normal]) as Texture[]
   useMemo(() => {
-    for (const t of [diff, rough, normal]) { t.wrapS = t.wrapT = RepeatWrapping; t.repeat.set(BENCH.w / 500, BENCH.d / 500); t.anisotropy = 8 }
+    for (const t of [diff, rough, normal]) { t.wrapS = t.wrapT = RepeatWrapping; t.repeat.set(BENCH.w / 420, BENCH.d / 420); t.anisotropy = 8 }
     diff.colorSpace = SRGBColorSpace
   }, [diff, rough, normal])
   return (
@@ -180,7 +181,8 @@ function Lamp({ base, head }: { base: Vector3; head: Vector3 }) {
 export function Workshop({ center, area = { w: TABLE_W, d: TABLE_D } }: { center: [number, number]; area?: { w: number; d: number } }) {
   const quality = useQuality()
   const [cx, cz] = center
-  const wallZ = cz - BENCH.d / 2 + 6
+  const wallZ = cz - BENCH.back + 6
+  const benchZ = cz - BENCH.back + BENCH.d / 2
   const matW = area.w + 2 * MAT_MARGIN.x
   const matD = area.d + 2 * MAT_MARGIN.z
   const base = useMemo(() => new Vector3(cx - matW / 2 - 40, -MAT_THICKNESS, cz - matD / 2 - 10), [cx, cz, matW, matD])
@@ -190,8 +192,8 @@ export function Workshop({ center, area = { w: TABLE_W, d: TABLE_D } }: { center
   const high = quality === 'high'
   return (
     <>
-      <Suspense fallback={<PlainTop cx={cx} cz={cz} />}>
-        <WoodTop cx={cx} cz={cz} />
+      <Suspense fallback={<PlainTop cx={cx} cz={benchZ} />}>
+        <WoodTop cx={cx} cz={benchZ} />
       </Suspense>
       <Wall cx={cx} wallZ={wallZ} />
       <SolderingStation x={cx + matW / 2 + 70} z={cz - matD / 2 - 5} />
@@ -203,7 +205,7 @@ export function Workshop({ center, area = { w: TABLE_W, d: TABLE_D } }: { center
         target={target}
         angle={0.75}
         penumbra={0.9}
-        intensity={1.5e5}
+        intensity={1.25e5}
         decay={2}
         color={p['lamp-glow']}
         castShadow

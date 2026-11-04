@@ -39,7 +39,9 @@ export function LedBody({ color, level, burnt = false }: { color: Color; level: 
   const p = usePalette()
   const quality = useQuality()
   const on = !burnt && level > 0
-  const glow = on ? 0.35 + 1.15 * level : 0
+  // Aan: helderder dan de bloom-drempel (luminantie > 1,5), ongeacht de kleur. Rood is van zichzelf donker en krijgt dus meer.
+  const lum = color.r * 0.2126 + color.g * 0.7152 + color.b * 0.0722
+  const glow = on ? (0.25 + 0.75 * level) * (1.8 / Math.max(0.35, lum)) : 0
   const epoxy = useGeo(() => ledEpoxyGeometry(), [])
   const flange = useGeo(() => ledFlangeGeometry(), [])
   const base = burnt ? p.ink : color
@@ -69,7 +71,7 @@ export function LedBody({ color, level, burnt = false }: { color: Color; level: 
       </mesh>
       <mesh name="led-die" position={[0, LED.flangeThick + 4.35, 0]}>
         <boxGeometry args={[0.45, 0.25, 0.45]} />
-        <meshStandardMaterial color={burnt ? p.ink : p.gold} emissive={base} emissiveIntensity={on ? 2 + level : 0} roughness={0.4} />
+        <meshStandardMaterial color={burnt ? p.ink : p.gold} emissive={base} emissiveIntensity={glow * 1.4} roughness={0.4} />
       </mesh>
     </group>
   )

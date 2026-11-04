@@ -35,7 +35,7 @@ export function breadboardTextures(c: BreadboardColors): { map: CanvasTexture; b
   const g = a.g
   const h = b.g
   g.fillStyle = css(c.body); g.fillRect(0, 0, W, H)
-  h.fillStyle = '#ffffff'; h.fillRect(0, 0, W, H)
+  h.fillStyle = 'rgb(255,255,255)'; h.fillRect(0, 0, W, H)
   // zachte korrel in het kunststof
   for (let i = 0; i < 14000; i++) {
     g.fillStyle = `rgba(0,0,0,${Math.random() * 0.025})`
@@ -43,7 +43,7 @@ export function breadboardTextures(c: BreadboardColors): { map: CanvasTexture; b
   }
   // middengroef (onder de rijen e en f)
   g.fillStyle = css(c.hole.clone().lerp(c.body, 0.35)); g.fillRect(mm(2), Z(-1.5), W - mm(4), mm(3))
-  h.fillStyle = '#1a1a1a'; h.fillRect(mm(2), Z(-1.5), W - mm(4), mm(3))
+  h.fillStyle = 'rgb(26,26,26)'; h.fillRect(mm(2), Z(-1.5), W - mm(4), mm(3))
   g.fillStyle = css(c.hole); g.fillRect(mm(2), Z(-0.4), W - mm(4), mm(0.8))
 
   const hole = (x: number, z: number) => {
@@ -51,8 +51,8 @@ export function breadboardTextures(c: BreadboardColors): { map: CanvasTexture; b
     g.fillStyle = css(c.body.clone().lerp(c.hole, 0.28)); g.fillRect(X(x) - mm(0.95), Z(z) - mm(0.95), mm(1.9), mm(1.9))
     g.fillStyle = css(c.hole); g.fillRect(X(x) - mm(0.55), Z(z) - mm(0.55), mm(1.1), mm(1.1))
     g.fillStyle = 'rgba(255,255,255,0.22)'; g.fillRect(X(x) - mm(0.55), Z(z) - mm(0.55), mm(1.1), mm(0.14))
-    h.fillStyle = '#666666'; h.fillRect(X(x) - mm(0.95), Z(z) - mm(0.95), mm(1.9), mm(1.9))
-    h.fillStyle = '#000000'; h.fillRect(X(x) - mm(0.55), Z(z) - mm(0.55), mm(1.1), mm(1.1))
+    h.fillStyle = 'rgb(102,102,102)'; h.fillRect(X(x) - mm(0.95), Z(z) - mm(0.95), mm(1.9), mm(1.9))
+    h.fillStyle = 'rgb(0,0,0)'; h.fillRect(X(x) - mm(0.55), Z(z) - mm(0.55), mm(1.1), mm(1.1))
   }
   for (let col = 1; col <= COLS; col++) for (let row = 0; row < ROWS; row++) {
     const p = holeXZ(col, row)
