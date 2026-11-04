@@ -70,12 +70,8 @@ export function ProScene(p: ProSceneProps) {
   return (
     <>
       <color attach="background" args={[pal.ink]} />
-      <ambientLight intensity={0.65} />
-      <directionalLight
-        position={[40, 110, 40]} intensity={1.7} castShadow shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-110} shadow-camera-right={110} shadow-camera-top={110} shadow-camera-bottom={-110}
-        shadow-camera-near={10} shadow-camera-far={300} shadow-bias={-0.0006} shadow-radius={4}
-      />
+      <ambientLight intensity={0.12} />
+      <directionalLight position={[40, 110, 40]} intensity={0.35} />
       <Table width={PRO_TABLE.width} depth={PRO_TABLE.depth} center={[PRO_TABLE.cx, PRO_TABLE.cz]} onClick={p.onTableClick} />
       <PiBoardModel
         clickAll marked={pinMarked}

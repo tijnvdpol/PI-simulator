@@ -13,10 +13,12 @@ import type { ViewName } from '../cameraViews'
 import type { ClientToTable } from '../TableProbe'
 import { rayToTable } from '../tablePlacement'
 import { holeMarks } from './Breadboard'
-import { BB_TOP, anchorForPoint, partCenter } from './layout'
+import { BB_TOP, PRO_TABLE, anchorForPoint, partCenter } from './layout'
 import { ProIssues, ProProperties, ProToolbar, ProWireProperties } from './ProPanels'
 import type { ProLive } from './ProParts'
 import { ProScene, type BurnSpot } from './ProScene'
+import { Effects } from '../env/Effects'
+import { Workshop } from '../env/Workshop'
 import { PRO_VIEWS } from './views'
 
 const DEBUG = import.meta.env.DEV || new URLSearchParams(location.search).has('debug')
@@ -214,6 +216,8 @@ export default function ProBench3D(props: ProBenchProps) {
         camera={{ position: [...PRO_VIEWS.reset.position], fov: 40, near: 1, far: 900 }}
         onCreated={({ gl }) => { if (DEBUG) (window as unknown as { __pisimGl?: unknown }).__pisimGl = gl }}
       >
+        <Workshop center={[PRO_TABLE.cx, PRO_TABLE.cz]} area={{ w: PRO_TABLE.width, d: PRO_TABLE.depth }} />
+        <Effects focus={[PRO_TABLE.cx, 0, PRO_TABLE.cz]} />
         <ProScene
           circuit={circuit} live={live}
           selectedPartId={selPart} selectedWireId={selWire} pending={props.pending}
