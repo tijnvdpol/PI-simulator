@@ -1,4 +1,5 @@
 import type { PythonErrorInfo } from './explainError'
+import type { OutLine } from './outputBuffer'
 
 export type ToWorker =
   | { type: 'init'; buffer: SharedArrayBuffer }
@@ -9,7 +10,7 @@ export type WarnMessage = { type: 'warn'; code: 'pin-unconnected' | 'pin-wrong-k
 export type FromWorker =
   | { type: 'ready' }
   | { type: 'load-error'; message: string }
-  | { type: 'stdout' | 'stderr'; text: string }
+  | { type: 'lines'; lines: OutLine[] }
   | WarnMessage
   | { type: 'done'; error: PythonErrorInfo | null }
 

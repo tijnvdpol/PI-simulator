@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_LINES, consoleReducer, type ConsoleLine } from './consoleState'
+import { MAX_LINES, appendCapped, consoleReducer, type ConsoleLine, type NewLine } from './consoleState'
 
 describe('consoleReducer', () => {
   it('voegt regels toe met oplopende id en stroom', () => {
@@ -32,5 +32,15 @@ describe('consoleReducer', () => {
     l = consoleReducer(l, { type: 'clear' })
     l = consoleReducer(l, { type: 'out', text: 'b' })
     expect(l[0].id).not.toBe(first)
+  })
+})
+
+describe('appendCapped (wachtrij voor een verborgen tabblad)', () => {
+  it('houdt de wachtrij op maximaal 500 regels, de nieuwste', () => {
+    const q: NewLine[] = []
+    for (let i = 0; i < 20_000; i++) appendCapped(q, { stream: 'out', text: `r${i}` })
+    expect(q).toHaveLength(MAX_LINES)
+    expect(q[0].text).toBe('r19500')
+    expect(q[q.length - 1].text).toBe('r19999')
   })
 })

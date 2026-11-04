@@ -52,6 +52,7 @@ const GROUPS: Record<string, { titel: string; rules: Rule[]; fallback: string }>
   NameError: { titel: 'Onbekende naam', rules: nameRules, fallback: 'je gebruikt een naam die Python niet kent.' },
   IndentationError: { titel: 'Inspringing klopt niet', rules: indentRules, fallback: 'de inspringing van deze regel klopt niet.' },
   SyntaxError: { titel: 'Schrijffout in je code', rules: syntaxRules, fallback: 'Python begrijpt deze regel niet. Controleer op typfouten, ontbrekende haakjes of dubbele punten.' },
+  InputNietBeschikbaar: { titel: 'input() werkt hier niet', rules: [], fallback: 'je gebruikt `input()`, maar in de simulator kun je geen tekst intypen terwijl je programma draait. Zet de waarde die je wilt gebruiken direct in je code, bijvoorbeeld `naam = "Sam"`.' },
   TypeError: { titel: 'Verkeerd soort waarde', rules: typeRules, fallback: 'je gebruikt een waarde van het verkeerde soort.' },
 }
 

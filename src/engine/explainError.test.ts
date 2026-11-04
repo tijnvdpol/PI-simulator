@@ -82,6 +82,13 @@ describe('explainError met echte Pyodide-meldingen', () => {
       expect(e.technisch).toContain(raw.type)
     }
   })
+  it('input() krijgt een eigen uitleg in het Nederlands', async () => {
+    const { e } = await explain('naam = input("Naam? ")')
+    expect(e.titel).toBe('input() werkt hier niet')
+    expect(e.uitleg).toContain('Regel 1')
+    expect(e.uitleg).toContain('input()')
+    expect(e.uitleg).toContain('direct in je code')
+  })
   it('zonder regelnummer geen "Regel null"', () => {
     const e = explainError({ type: 'NameError', message: "name 'x' is not defined", line: null, traceback: '' })
     expect(e.uitleg).not.toContain('Regel')

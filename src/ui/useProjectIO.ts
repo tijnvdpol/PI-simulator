@@ -20,6 +20,8 @@ export interface ProjectIODeps {
   href?: string
   clipboard?: { writeText(text: string): Promise<void> }
   saveBlob?: (blob: Blob, filename: string) => void
+  /** Na een gelukte keer opslaan of downloaden. */
+  onSaved?: () => void
 }
 
 function defaultSaveBlob(blob: Blob, filename: string) {
@@ -41,10 +43,11 @@ export function useProjectIO(deps: ProjectIODeps) {
     try {
       saveLocal(project, deps.store)
       toast('Opgeslagen in je browser', 'ok')
+      deps.onSaved?.()
     } catch {
       toast('Opslaan lukt niet (is je browser-opslag vol of uitgeschakeld?). Download je project als bestand.', 'fout')
     }
-  }, [project, toast, deps.store])
+  }, [project, toast, deps.store, deps.onSaved])
 
   const openLast = useCallback(() => {
     const r = loadLocal(deps.store)
@@ -55,7 +58,8 @@ export function useProjectIO(deps: ProjectIODeps) {
 
   const download = useCallback(() => {
     (deps.saveBlob ?? defaultSaveBlob)(projectToBlob(project), `${slug(project.name)}.json`)
-  }, [project, deps.saveBlob])
+    deps.onSaved?.()
+  }, [project, deps.saveBlob, deps.onSaved])
 
   const importFile = useCallback(async (file: File) => {
     const r = await readProjectFile(file)

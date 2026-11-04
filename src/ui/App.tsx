@@ -12,7 +12,9 @@ import { pinByPhysical } from '../pinout/pinout'
 import type { Project } from '../project/types'
 import { CodeEditor, type CodeEditorHandle } from './CodeEditor'
 import { Console } from './Console'
-import { consoleReducer, type NewLine } from './consoleState'
+import { appendCapped, consoleReducer, type NewLine } from './consoleState'
+import { isDirty, useShareLinkListener, useUnsavedGuard } from './guards'
+import { serializeProject } from '../project/parse'
 import { EmptyState } from './EmptyState'
 import { ExamplesMenu } from './ExamplesMenu'
 import { ErrorCard } from './ErrorCard'
@@ -55,18 +57,18 @@ function Simulator() {
   const [issues, setIssues] = useState<PinIssue[]>([])
   const engine = useRef<PythonEngine | null>(null)
   const pending = useRef<NewLine[]>([])
-  const raf = useRef(0)
+  const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Console-uitvoer wordt per animatieframe gebundeld, zodat een snelle print()-lus de pagina niet vertraagt.
+  // Console-uitvoer wordt hooguit 10× per seconde doorgezet, zodat een snelle print()-lus de pagina niet vertraagt.
   const flush = useCallback(() => {
-    raf.current = 0
+    flushTimer.current = null
     const batch = pending.current
     pending.current = []
     if (batch.length) dispatchConsole({ type: 'batch', lines: batch })
   }, [])
   const queue = useCallback((l: NewLine) => {
-    pending.current.push(l)
-    if (!raf.current) raf.current = requestAnimationFrame(flush)
+    appendCapped(pending.current, l) // nooit meer dan 500 regels in de wachtrij, ook niet in een verborgen tabblad
+    if (flushTimer.current === null) flushTimer.current = setTimeout(flush, 100)
   }, [flush])
 
   useEffect(() => {
@@ -120,7 +122,13 @@ function Simulator() {
     if (/^#?p=/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search)
   }, [initial, show])
 
+  // Wat er bij het laden/opslaan in het project stond; verschil = niet-opgeslagen werk.
+  const baseline = useRef(serializeProject(project))
+  const dirty = isDirty(baseline.current, project)
+  useUnsavedGuard(dirty)
+
   const openProject = (p: Project) => {
+    if (dirty && !window.confirm('Je hebt wijzigingen die je nog niet hebt opgeslagen. Als je nu een ander project opent, gaat je huidige werk verloren. Doorgaan?')) return
     if (status === 'draait') engine.current?.stop()
     pending.current = []
     dispatchConsole({ type: 'clear' })
@@ -128,9 +136,11 @@ function Simulator() {
     setIssues([])
     setSensorValues({})
     load(p)
+    baseline.current = serializeProject(p)
   }
+  useShareLinkListener(openProject, (message) => show(message, 'fout'))
 
-  const io = useProjectIO({ project, openProject, toast: show })
+  const io = useProjectIO({ project, openProject, toast: show, onSaved: () => { baseline.current = serializeProject(project) } })
 
   return (
     <div className="flex h-full min-w-[1100px] flex-col">

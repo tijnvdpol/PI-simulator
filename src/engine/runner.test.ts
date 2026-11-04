@@ -32,4 +32,7 @@ describe('pisim.runner', () => {
     expect((await h.run('x = 1')).error).toBeNull()
     expect((await h.run('raise SystemExit')).error).toBeNull()
   })
+  it('input() geeft een eigen, herkenbare fout (geen OSError)', async () => {
+    expect((await h.run('x = input("Naam? ")')).error).toMatchObject({ type: 'InputNietBeschikbaar', line: 1 })
+  })
 })

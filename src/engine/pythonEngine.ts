@@ -66,8 +66,7 @@ export class PythonEngine {
     switch (m.type) {
       case 'ready': this.o.state.resetOutputs(); this.setStatus('klaar'); break
       case 'load-error': this.setStatus('laadfout'); break
-      case 'stdout':
-      case 'stderr': this.o.onOutput({ stream: m.type, text: m.text }); break
+      case 'lines': for (const l of m.lines) this.o.onOutput(l); break
       case 'warn': this.o.onWarn(m); break
       case 'done': this.setStatus('klaar'); this.o.onDone(m.error); break
     }

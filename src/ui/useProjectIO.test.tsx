@@ -47,6 +47,13 @@ describe('useProjectIO', () => {
     expect(loadLocal(store)).toEqual({ ok: true, value: proj })
     expect(deps.toast).toHaveBeenCalledWith('Opgeslagen in je browser', 'ok')
   })
+  it('onSaved wordt aangeroepen na opslaan en na downloaden (voor de "niet opgeslagen"-controle)', () => {
+    const onSaved = vi.fn()
+    const { result } = setup({ onSaved })
+    act(() => result.current.save())
+    act(() => result.current.download())
+    expect(onSaved).toHaveBeenCalledTimes(2)
+  })
   it('openLast zonder opslag → melding, geen openProject', () => {
     const { result, deps } = setup()
     act(() => result.current.openLast())

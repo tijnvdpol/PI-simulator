@@ -17,3 +17,9 @@ export function consoleReducer(lines: ConsoleLine[], a: ConsoleAction): ConsoleL
   const next = [...lines, ...tail.map((l) => ({ id: nextId++, stream: l.stream, text: l.text }))]
   return next.length > MAX_LINES ? next.slice(-MAX_LINES) : next
 }
+
+/** Voegt een regel toe aan een wachtrij die nooit groter wordt dan `max` (bijv. in een verborgen tabblad). */
+export function appendCapped(queue: NewLine[], line: NewLine, max = MAX_LINES): void {
+  queue.push(line)
+  if (queue.length > max) queue.splice(0, queue.length - max)
+}

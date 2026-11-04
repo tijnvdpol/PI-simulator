@@ -22,6 +22,8 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 1440, height: 860 } })
 const pageErrors = []
+const dialogs = []
+page.on('dialog', (d) => { dialogs.push(d.message()); void d.accept() })
 page.on('pageerror', (e) => pageErrors.push(e.message))
 
 const starting = () => page.getByText('Python wordt gestart…')
@@ -80,6 +82,16 @@ try {
   check('Stop werkt bij while True zonder sleep', Date.now() - tStop < 30000, `${Date.now() - tStop} ms`)
   check('led is uit na Stop', (await glow()) === 'off' || (await page.locator('[data-glow]').count()) === 0)
 
+  // Review Focus 1: een print()-lus mag de pagina niet vastzetten en Stop moet snel werken.
+  await typeCode(['i = 0', 'while True:'])
+  await page.keyboard.type('i += 1'); await page.keyboard.press('Enter'); await page.keyboard.type('print(i)')
+  await startBtn().click(); await stopBtn().waitFor({ state: 'visible' }); await page.waitForTimeout(6000)
+  const tPing = Date.now(); await page.evaluate(() => 1)
+  check('pagina blijft bruikbaar tijdens een print()-lus', Date.now() - tPing < 1500, `${Date.now() - tPing} ms vertraging`)
+  const tFlood = Date.now(); await stopBtn().click({ timeout: 20000 }); await ready()
+  check('Stop werkt snel na een print()-lus', Date.now() - tFlood < 12000, `${Date.now() - tFlood} ms`)
+  check('console toont hooguit 500 regels', (await page.locator('.font-mono > div').count()) <= 502)
+
   // De drie voorbeelden.
   for (const titel of ['Knipperende led', 'Knop schakelt led', 'Temperatuuralarm']) {
     await openExample(titel); await startBtn().click(); await page.waitForTimeout(2500)
@@ -102,6 +114,7 @@ try {
   await card().waitFor({ timeout: 15000 })
   check('NameError → Nederlandse uitleg met regelnummer', (await card().innerText()).includes('Regel 1: je gebruikt `led`, maar die heb je nog niet aangemaakt.'))
   check('technische melding is ingeklapt', !(await page.locator('details').first().evaluate((d) => d.open)))
+  check('app vraagt bevestiging voordat niet-opgeslagen werk wordt vervangen', dialogs.some((m) => m.includes('nog niet hebt opgeslagen')))
   check('geen onverwachte pagina-fouten', pageErrors.length === 0, pageErrors.join(' | '))
 } catch (e) {
   check('rooktest zonder uitzondering', false, String(e?.message ?? e).split('\n')[0])
