@@ -62,3 +62,12 @@ export function canPlace(part: ProPart, others: ProPart[]): boolean {
   const used = new Set(others.filter((o) => o.id !== part.id).flatMap((o) => legPlaces(o).map((l) => l.hole)))
   return legPlaces(part).every((l) => !used.has(l.hole))
 }
+
+/** Eerste vrije plek voor een nieuw onderdeel (bijvoorbeeld als je het met het toetsenbord toevoegt). */
+export function firstFreeAnchor(kind: ProKind, parts: ProPart[], rot: Rot = 0): { col: number; row: number } | null {
+  const rows = kind === 'button' ? [4] : [0, 1, 2, 3, 6, 7, 8, 9]
+  for (let col = 2; col <= COLS; col++) for (const row of rows) {
+    if (canPlace({ id: '__new', kind, col, row, rot }, parts)) return { col, row }
+  }
+  return null
+}

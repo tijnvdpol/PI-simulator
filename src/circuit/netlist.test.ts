@@ -94,3 +94,16 @@ describe('netlijst', () => {
     expect(n.legNet(b, 'a')).not.toBe(n.legNet(b, 'c'))
   })
 })
+
+describe('firstFreeAnchor', () => {
+  it('vindt een vrije plek en slaat bezette over', async () => {
+    const { firstFreeAnchor } = await import('./parts')
+    const a = firstFreeAnchor('led', [])!
+    expect(canPlace({ id: 'x', kind: 'led', ...a, rot: 0 }, [])).toBe(true)
+    const taken: ProPart = { id: 'a', kind: 'led', ...a, rot: 0 }
+    const b = firstFreeAnchor('led', [taken])!
+    expect(b).not.toEqual(a)
+    expect(canPlace({ id: 'y', kind: 'led', ...b, rot: 0 }, [taken])).toBe(true)
+    expect(firstFreeAnchor('button', [])!.row).toBe(4)
+  })
+})

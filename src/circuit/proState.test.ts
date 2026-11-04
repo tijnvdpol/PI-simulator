@@ -132,3 +132,13 @@ describe('ongedaan maken en opnieuw', () => {
     expect(s.burnt).toEqual([])
   })
 })
+
+describe('draadkleur wijzigen', () => {
+  it('past de kleur aan en is ongedaan te maken', () => {
+    let s = run([{ type: 'addWire', a: 'pin:11', b: 'h:a1', color: 'blue' }, { type: 'recolorWire', id: 'w1', color: 'orange' }])
+    expect(s.present.wires[0].color).toBe('orange')
+    s = run([{ type: 'undo' }], s)
+    expect(s.present.wires[0].color).toBe('blue')
+    expect(run([{ type: 'recolorWire', id: 'nope', color: 'red' }]).past).toHaveLength(0)
+  })
+})

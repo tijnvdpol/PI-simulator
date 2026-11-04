@@ -33,13 +33,15 @@ export const LIMITS = {
   target: { x: [-60, 60], y: [0, 20], z: [-50, 50] },
 } as const
 
+export type CameraLimits = typeof LIMITS
+
 const clamp = (v: number, [lo, hi]: readonly [number, number] | readonly number[]) => Math.min(hi, Math.max(lo, v))
 
 /** Houd het kijkpunt (waar je omheen draait) boven de tafel. */
-export function clampTarget<T extends { x: number; y: number; z: number }>(t: T): T {
-  t.x = clamp(t.x, LIMITS.target.x)
-  t.y = clamp(t.y, LIMITS.target.y)
-  t.z = clamp(t.z, LIMITS.target.z)
+export function clampTarget<T extends { x: number; y: number; z: number }>(t: T, limits: Pick<typeof LIMITS, 'target'> = LIMITS): T {
+  t.x = clamp(t.x, limits.target.x)
+  t.y = clamp(t.y, limits.target.y)
+  t.z = clamp(t.z, limits.target.z)
   return t
 }
 

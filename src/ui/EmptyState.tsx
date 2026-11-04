@@ -14,3 +14,14 @@ export function EmptyState({ onOpenExamples }: { onOpenExamples: () => void }) {
     </div>
   )
 }
+
+export function ProEmptyState() {
+  return (
+    <div className="pointer-events-none absolute inset-x-0 bottom-24 flex justify-center">
+      <div className="pointer-events-auto rounded-ui border border-line bg-panel/95 px-6 py-4 text-center shadow-lg">
+        <p className="font-medium text-fg">Sleep een led en een weerstand op het breadboard</p>
+        <p className="text-sm text-fg-muted">Maak daarna draden: klik op een pin van de Pi en dan op een gaatje.</p>
+      </div>
+    </div>
+  )
+}

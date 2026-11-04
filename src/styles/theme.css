@@ -36,6 +36,23 @@
   --color-wire-orange: #ff9a3d;
   --color-wire-purple: #b48cff;
 
+  /* Pro-modus: breadboard, weerstandskleuren en rook */
+  --color-bb: #d8d2c0;
+  --color-bb-hole: #3b3c40;
+  --color-resistor: #d9b98c;
+  --color-band-black: #15161a;
+  --color-band-brown: #7a4a21;
+  --color-band-red: #d83b2e;
+  --color-band-orange: #ee8a2a;
+  --color-band-yellow: #f1d13c;
+  --color-band-green: #3fa34d;
+  --color-band-blue: #3b6fd1;
+  --color-band-violet: #8a4fd0;
+  --color-band-grey: #8c8f96;
+  --color-band-white: #f1efe8;
+  --color-band-gold: #c9a227;
+  --color-smoke: #8d9097;
+
   --radius-ui: 8px;
   --dur: 180ms;
 }

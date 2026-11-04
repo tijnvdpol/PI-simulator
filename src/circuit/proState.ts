@@ -30,6 +30,7 @@ export type ProAction =
   | { type: 'setColor'; id: string; color: LedColor }
   | { type: 'addWire'; a: string; b: string; color?: WireColor }
   | { type: 'removeWire'; id: string }
+  | { type: 'recolorWire'; id: string; color: WireColor }
   | { type: 'clickTerminal'; terminal: string }
   | { type: 'cancelWire' }
   | { type: 'setWireColor'; color: WireColor | 'auto' }
@@ -112,6 +113,10 @@ export function proReducer(s: ProState, a: ProAction): ProState {
     case 'removeWire': {
       if (!s.present.wires.some((w) => w.id === a.id)) return s
       return commit(s, { ...s.present, wires: s.present.wires.filter((w) => w.id !== a.id) })
+    }
+    case 'recolorWire': {
+      if (!s.present.wires.some((w) => w.id === a.id)) return s
+      return commit(s, { ...s.present, wires: s.present.wires.map((w) => (w.id === a.id ? { ...w, color: a.color } : w)) })
     }
     case 'clickTerminal': {
       if (s.pending === null) return parseTerminal(a.terminal) ? { ...s, pending: a.terminal, error: null } : s

@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import { Vector3 } from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
-import { LIMITS, VIEWS, clampTarget, type ViewName } from './cameraViews'
+import { LIMITS, VIEWS, clampTarget, type CameraView, type ViewName } from './cameraViews'
 
 export interface ViewRequest { view: ViewName; nonce: number }
 
@@ -11,7 +11,7 @@ export interface ViewRequest { view: ViewName; nonce: number }
  * Draaien en zoomen met grenzen, plus soepele overgangen naar een camerastand.
  * Bij `frameloop="demand"` vraagt de overgang zelf nieuwe frames aan zolang hij loopt.
  */
-export function CameraRig({ request, enabled = true }: { request: ViewRequest | null; enabled?: boolean }) {
+export function CameraRig({ request, enabled = true, views = VIEWS, limits = LIMITS }: { request: ViewRequest | null; enabled?: boolean; views?: Record<ViewName, CameraView>; limits?: typeof LIMITS }) {
   const controls = useRef<OrbitControlsImpl>(null)
   const goal = useRef<{ pos: Vector3; target: Vector3 } | null>(null)
   const camera = useThree((s) => s.camera)
@@ -19,10 +19,10 @@ export function CameraRig({ request, enabled = true }: { request: ViewRequest | 
 
   useEffect(() => {
     if (!request) return
-    const v = VIEWS[request.view]
+    const v = views[request.view]
     goal.current = { pos: new Vector3(...v.position), target: new Vector3(...v.target) }
     invalidate()
-  }, [request, invalidate])
+  }, [request, views, invalidate])
 
   useFrame((_, dt) => {
     const g = goal.current
@@ -48,13 +48,13 @@ export function CameraRig({ request, enabled = true }: { request: ViewRequest | 
       enabled={enabled}
       enableDamping
       dampingFactor={0.12}
-      minDistance={LIMITS.minDistance}
-      maxDistance={LIMITS.maxDistance}
-      minPolarAngle={LIMITS.minPolarAngle}
-      maxPolarAngle={LIMITS.maxPolarAngle}
-      target={VIEWS.reset.target}
+      minDistance={limits.minDistance}
+      maxDistance={limits.maxDistance}
+      minPolarAngle={limits.minPolarAngle}
+      maxPolarAngle={limits.maxPolarAngle}
+      target={views.reset.target}
       onStart={() => { goal.current = null }}
-      onChange={(e) => { if (e?.target) clampTarget((e.target as OrbitControlsImpl).target) }}
+      onChange={(e) => { if (e?.target) clampTarget((e.target as OrbitControlsImpl).target, limits) }}
     />
   )
 }
