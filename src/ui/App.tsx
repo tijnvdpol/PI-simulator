@@ -9,10 +9,12 @@ import { HardwareState } from '../engine/hardwareState'
 import type { EngineStatus } from '../engine/protocol'
 import { PythonEngine, type WorkerLike } from '../engine/pythonEngine'
 import { pinByPhysical } from '../pinout/pinout'
+import type { Project } from '../project/types'
 import { CodeEditor, type CodeEditorHandle } from './CodeEditor'
 import { Console } from './Console'
 import { consoleReducer, type NewLine } from './consoleState'
 import { EmptyState } from './EmptyState'
+import { ExamplesMenu } from './ExamplesMenu'
 import { ErrorCard } from './ErrorCard'
 import { PartsTray } from './PartsTray'
 import { RunControls } from './RunControls'
@@ -35,7 +37,8 @@ export function App() {
 }
 
 function Simulator() {
-  const { bench, code, setCode, dispatchBench } = useProject()
+  const { bench, code, setCode, dispatchBench, load } = useProject()
+  const [examplesOpen, setExamplesOpen] = useState(false)
   const hw = useMemo(() => new HardwareState(), [])
   const sound = useMemo(() => new BuzzerSound(), [])
   const editor = useRef<CodeEditorHandle>(null)
@@ -104,9 +107,20 @@ function Simulator() {
     dispatchConsole({ type: 'sys', text: 'Gestopt.' })
   }
 
+  const openProject = (p: Project) => {
+    if (status === 'draait') engine.current?.stop()
+    pending.current = []
+    dispatchConsole({ type: 'clear' })
+    setExplanation(null)
+    setIssues([])
+    setSensorValues({})
+    load(p)
+  }
+
   return (
     <div className="flex h-full min-w-[1100px] flex-col">
-      <TopBar />
+      <TopBar onExamples={() => setExamplesOpen(true)} />
+      <ExamplesMenu open={examplesOpen} onClose={() => setExamplesOpen(false)} onPick={openProject} />
       <main className="grid min-h-0 flex-1 grid-cols-[16rem_1fr_28rem]">
         <aside aria-label="Onderdelenbak" className="overflow-y-auto border-r border-line bg-panel">
           <PartsTray />
@@ -129,7 +143,7 @@ function Simulator() {
             }}
             sensors={{ values: sensorValues, onChange: (part, v) => setSensorValues((prev) => ({ ...prev, [part.id]: v })) }}
           >
-            {bench.parts.length === 0 && <EmptyState onOpenExamples={() => {}} />}
+            {bench.parts.length === 0 && <EmptyState onOpenExamples={() => setExamplesOpen(true)} />}
           </Bench>
         </section>
         <section aria-label="Code" className="flex min-h-0 flex-col border-l border-line bg-panel">
