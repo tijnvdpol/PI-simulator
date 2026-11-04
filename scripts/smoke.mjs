@@ -10,7 +10,7 @@ const PORT = 4173
 const BASE = process.env.BASE_URL ?? `http://localhost:${PORT}`
 let server
 if (!process.env.BASE_URL) {
-  server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], { stdio: 'ignore' })
+  server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], { stdio: 'ignore', detached: true })
   for (let i = 0; i < 50; i++) {
     try { await fetch(BASE); break } catch { await new Promise((r) => setTimeout(r, 200)) }
   }
@@ -194,7 +194,8 @@ try {
   check('rooktest zonder uitzondering', false, String(e?.message ?? e).split('\n')[0])
 } finally {
   await browser.close()
-  server?.kill()
+  // `npx` start vite als kind: de hele processgroep stoppen, anders blijft de preview-server achter op de poort.
+  if (server?.pid) { try { process.kill(-server.pid) } catch { /* al gestopt */ } }
 }
 const failed = results.filter((r) => !r).length
 console.log(`\n${results.length - failed}/${results.length} controles geslaagd`)
