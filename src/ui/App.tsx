@@ -1,3 +1,4 @@
+import { Bench } from '../bench/components/Bench'
 import { checkEnvironment } from '../engine/environment'
 import { EmptyState } from './EmptyState'
 import { PartsTray } from './PartsTray'
@@ -6,7 +7,7 @@ import { useProject } from './useProject'
 
 export function App() {
   const env = checkEnvironment()
-  const { bench, code, setCode } = useProject()
+  const { bench, code, setCode, dispatchBench } = useProject()
 
   if (!env.ok) {
     return (
@@ -27,7 +28,9 @@ export function App() {
           <PartsTray />
         </aside>
         <section aria-label="Werkbank" className="relative min-h-0 bg-bg">
-          {bench.parts.length === 0 && <EmptyState onOpenExamples={() => {}} />}
+          <Bench parts={bench.parts} connecting={bench.connecting} error={bench.error} locked={false} dispatch={dispatchBench}>
+            {bench.parts.length === 0 && <EmptyState onOpenExamples={() => {}} />}
+          </Bench>
         </section>
         <section aria-label="Code" className="flex min-h-0 flex-col border-l border-line bg-panel">
           <textarea
