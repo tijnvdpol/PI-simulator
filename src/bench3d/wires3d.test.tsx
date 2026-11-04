@@ -35,6 +35,18 @@ describe('draadeinden', () => {
     expect(gnd.b).toEqual([gpin.x, gpin.y, gpin.z])
   })
 
+  it('servo: elke draad begint bij zijn eigen aansluitpunt en eindigt op de gekozen pin', () => {
+    const parts: Part[] = [{ id: 's', kind: 'servo', x: 300, y: 150, connections: { signal: { type: 'pin', physical: 12 }, v5: { type: 'pin', physical: 2 }, gnd: { type: 'pin', physical: 6 } } }]
+    const o = partWorld(parts[0])
+    for (const w of computeWires(parts)) {
+      const ends = wireEnds(w, parts)!
+      const anchor = PART_ANCHORS.servo.terminals![w.terminal!]
+      expect(ends.a).toEqual([o[0] + anchor[0], anchor[1], o[2] + anchor[2]])
+      const pin = pinWorld((w.to as { physical: number }).physical)
+      expect(ends.b).toEqual([pin.x, pin.y, pin.z])
+    }
+  })
+
   it('analoge onderdelen eindigen op het chipkanaal', () => {
     const parts: Part[] = [{ id: 'part-1', kind: 'temperature', x: 600, y: 150, connections: { signal: { type: 'adc', channel: 3 } } }]
     const w = computeWires(parts).find((x) => x.id === 'part-1:signal')!

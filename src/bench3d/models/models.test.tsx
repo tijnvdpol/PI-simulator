@@ -121,10 +121,10 @@ describe('onderdelen', () => {
   })
 
   it('PartModel kiest het juiste model voor elk soort', async () => {
-    const names: Record<PartKind, string> = { led: 'led', button: 'button', buzzer: 'buzzer', temperature: 'temperature', potentiometer: 'potentiometer' }
+    const names: Partial<Record<PartKind, string>> = { led: 'led', button: 'button', buzzer: 'buzzer', temperature: 'temperature', potentiometer: 'potentiometer' }
     for (const kind of Object.keys(names) as PartKind[]) {
       const r = await ReactThreeTestRenderer.create(<PartModel part={part(kind)} live={{}} />)
-      expect(r.scene.instance.getObjectByName(names[kind]), kind).toBeTruthy()
+      expect(r.scene.instance.getObjectByName(names[kind]!), kind).toBeTruthy()
     }
   })
 

@@ -24,10 +24,10 @@ export const PART_ANCHORS: Record<PartKind, Anchors> = {
   rgbled: { signal: [-3.81, 2, 0], terminals: { r: [-3.81, 2, 0], gnd: [-1.27, 2, 0], g: [1.27, 2, 0], b: [3.81, 2, 0] } },
   // Servo: stekker aan de linkerkant
   servo: { signal: [-14, 5, 2.5], terminals: { signal: [-14, 5, 2.5], v5: [-14, 5, 0], gnd: [-14, 5, -2.5] } },
-  // HC-SR04: vier pinnen aan de voorrand (VCC, Trig, Echo, GND)
-  distance: { signal: PINS_FRONT(11)[1], terminals: { v5: PINS_FRONT(11)[0], trigger: PINS_FRONT(11)[1], echo: PINS_FRONT(11)[2], gnd: PINS_FRONT(11)[3] } },
-  // OLED-module: vier pinnen aan de voorrand (GND, VCC, SCL, SDA)
-  oled: { signal: PINS_FRONT(14)[3], terminals: { gnd: PINS_FRONT(14)[0], v33: PINS_FRONT(14)[1], scl: PINS_FRONT(14)[2], sda: PINS_FRONT(14)[3] } },
+  // HC-SR04 (staand): vier pinnen onder de printplaat (VCC, Trig, Echo, GND)
+  distance: { signal: PINS_FRONT(0)[1], terminals: { v5: PINS_FRONT(0)[0], trigger: PINS_FRONT(0)[1], echo: PINS_FRONT(0)[2], gnd: PINS_FRONT(0)[3] } },
+  // OLED-module (staand): vier pinnen onder de printplaat (GND, VCC, SCL, SDA)
+  oled: { signal: PINS_FRONT(0)[3], terminals: { gnd: PINS_FRONT(0)[0], v33: PINS_FRONT(0)[1], scl: PINS_FRONT(0)[2], sda: PINS_FRONT(0)[3] } },
 }
 
 /** MCP3008 (DIP-16): pin 1 linksboven, tegen de klok in. De chip staat op de plek van de 2D-chip. */

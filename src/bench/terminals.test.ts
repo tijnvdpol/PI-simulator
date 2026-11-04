@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PART_KINDS } from '../project/types'
-import { TERMINALS, pinFit, suggestPin, terminalsOf } from './terminals'
+import { TERMINALS, nextTerminal, pinFit, suggestPin, terminalsOf } from './terminals'
 
 const spec = (kind: Parameters<typeof terminalsOf>[0], id: string) => terminalsOf(kind).find((t) => t.id === id)!
 
@@ -61,5 +61,22 @@ describe('terminals', () => {
   })
   it('voorgestelde pinnen zijn zelf altijd geschikt', () => {
     for (const k of PART_KINDS) for (const t of TERMINALS[k]) for (const p of t.suggest ?? []) expect(pinFit(t, p).ok, `${k}.${t.id} pin ${p}`).toBe(true)
+  })
+})
+
+describe('nextTerminal', () => {
+  const pin = (physical: number) => ({ type: 'pin' as const, physical })
+  it('springt naar de eerstvolgende lege aansluiting na de huidige', () => {
+    expect(nextTerminal('servo', { signal: pin(12) }, 'signal')).toBe('v5')
+    expect(nextTerminal('servo', { signal: pin(12), v5: pin(2) }, 'v5')).toBe('gnd')
+  })
+  it('gaat rond naar een eerdere lege aansluiting', () => {
+    expect(nextTerminal('servo', { v5: pin(2), gnd: pin(6) }, 'gnd')).toBe('signal')
+  })
+  it('alles aangesloten: blijft op de huidige', () => {
+    expect(nextTerminal('servo', { signal: pin(12), v5: pin(2), gnd: pin(6) }, 'v5')).toBe('v5')
+  })
+  it('zonder huidige: de eerste lege', () => {
+    expect(nextTerminal('oled', { sda: pin(3) })).toBe('scl')
   })
 })

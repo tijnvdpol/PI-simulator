@@ -1,7 +1,8 @@
 import type { PinIssue } from '../engine/explainError'
 import { LED_COLORS, type LedColor, type Part } from '../project/types'
-import { PART_NAMES_NL, isAnalog, type BenchAction } from '../bench/benchState'
+import { PART_NAMES_NL, hasColor, isAnalog, type BenchAction } from '../bench/benchState'
 import type { BenchWarning } from '../bench/warnings'
+import type { PartIssue } from '../bench/partStatus'
 
 const COLOR_LABELS: Record<LedColor, string> = { red: 'Rood', green: 'Groen', yellow: 'Geel', blue: 'Blauw', white: 'Wit' }
 const COLOR_BG: Record<LedColor, string> = { red: 'bg-led-red', green: 'bg-led-green', yellow: 'bg-led-yellow', blue: 'bg-led-blue', white: 'bg-led-white' }
@@ -15,12 +16,16 @@ export interface BenchOverlaysProps {
   selectedPart?: Part
   warnings: BenchWarning[]
   issues: PinIssue[]
+  /** Meldingen over aansluitingen (ontbrekend, ongeschikt, geen voeding). */
+  partIssues?: PartIssue[]
   dispatch: (a: BenchAction) => void
   onDeselect: () => void
 }
 
 /** HTML-laag over de 3D-scène: hints, foutmeldingen, kleurkeuze, verwijderknop en waarschuwingen. */
-export function BenchOverlays({ locked, connectingPart, hideConnectHint, error, selectedPart, warnings, issues, dispatch, onDeselect }: BenchOverlaysProps) {
+export function BenchOverlays({ locked, connectingPart, hideConnectHint, error, selectedPart, warnings, issues, partIssues = [], dispatch, onDeselect }: BenchOverlaysProps) {
+  // Voeding en ongeschikte pinnen laten we altijd zien; "er mist nog iets" alleen voor het gekozen onderdeel (anders staat de werkbank vol).
+  const shown = partIssues.filter((i) => i.code !== 'missing' || i.partId === selectedPart?.id)
   return (
     <>
       <div className="pointer-events-none absolute inset-x-0 top-3 flex flex-col items-center gap-2">
@@ -38,7 +43,7 @@ export function BenchOverlays({ locked, connectingPart, hideConnectHint, error, 
         {selectedPart && !locked && (
           <div className="pointer-events-auto flex items-center gap-2 rounded-ui border border-line bg-panel px-3 py-1.5 text-sm">
             <span className="text-fg-muted">{PART_NAMES_NL[selectedPart.kind]}</span>
-            {selectedPart.kind === 'led' && LED_COLORS.map((c) => (
+            {hasColor(selectedPart.kind) && LED_COLORS.map((c) => (
               <button
                 key={c}
                 type="button"
@@ -65,6 +70,12 @@ export function BenchOverlays({ locked, connectingPart, hideConnectHint, error, 
           <div key={w.partId} role="status" className="flex gap-2 rounded-ui border border-warning bg-panel p-3 text-sm">
             <span aria-hidden className="text-warning">⚠</span>
             <span>{w.message}</span>
+          </div>
+        ))}
+        {shown.map((i) => (
+          <div key={`${i.partId}:${i.code}:${i.terminal ?? ''}`} role="status" data-issue={i.code} className="flex gap-2 rounded-ui border border-warning bg-panel p-3 text-sm">
+            <span aria-hidden className="text-warning">⚠</span>
+            <span>{i.message}</span>
           </div>
         ))}
         {issues.map((i) => (

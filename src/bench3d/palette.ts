@@ -4,7 +4,7 @@ import { Color } from 'three'
 /** Thema-tokens (uit `theme.css`) die de 3D-scène gebruikt. */
 export const PALETTE_TOKENS = [
   'bg', 'panel', 'line', 'fg', 'fg-muted', 'board', 'gold', 'accent', 'danger', 'warning',
-  'metal', 'metal-dark', 'ink',
+  'metal', 'metal-dark', 'ink', 'oled-on',
   'led-red', 'led-green', 'led-yellow', 'led-blue', 'led-white',
   'wire-red', 'wire-black', 'wire-blue', 'wire-green', 'wire-yellow', 'wire-orange', 'wire-purple',
 ] as const

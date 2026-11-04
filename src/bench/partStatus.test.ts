@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Connections, Part, PartKind } from '../project/types'
-import { isComplete, missingTerminals, partIssues } from './partStatus'
+import { isComplete, issueSummary, missingTerminals, partIssues } from './partStatus'
 
 const pin = (physical: number) => ({ type: 'pin' as const, physical })
 const part = (kind: PartKind, connections: Connections = {}, id = 'x'): Part => ({ id, kind, x: 0, y: 0, connections })
@@ -48,5 +48,14 @@ describe('partStatus', () => {
   })
   it('een potmeter zonder kanaal ook', () => {
     expect(partIssues([part('potentiometer')])[0].message).toContain('potmeter')
+  })
+})
+
+describe('issueSummary', () => {
+  it('korte regel voor onder het onderdeel', () => {
+    expect(issueSummary(part('servo', { signal: pin(12) }))).toBe('Mist: 5V, GND')
+    expect(issueSummary(part('oled', { sda: pin(11), scl: pin(5), v33: pin(1), gnd: pin(6) }))).toBe('SDA past niet op deze pin')
+    expect(issueSummary(part('led'))).toBe('Nog niet aangesloten')
+    expect(issueSummary(part('servo', { signal: pin(12), v5: pin(2), gnd: pin(6) }))).toBeNull()
   })
 })

@@ -40,6 +40,7 @@ export class HardwareState {
   constructor(buffer?: SharedArrayBuffer | ArrayBuffer) {
     this.buffer = buffer ?? new SharedArrayBuffer(HardwareState.BYTES)
     this.a = new Int32Array(this.buffer)
+    if (!buffer) Atomics.store(this.a, CONTRAST, 255)
   }
 
   setParts(parts: Part[]): void {

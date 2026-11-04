@@ -2,12 +2,13 @@ import { usePalette } from '../palette'
 import type { PartModelProps } from './types'
 
 /** Led van 5 mm: cilinder met koepel, flens en twee pootjes (lang = plus). */
-export function LedModel({ part, live }: PartModelProps) {
+/** `linear`: de gloed volgt de helderheid 0–1 (dimbare led); anders gaat de led aan of uit. */
+export function LedModel({ part, live, linear = false }: PartModelProps & { linear?: boolean }) {
   const p = usePalette()
   const color = p[`led-${part.color ?? 'red'}`]
   const level = Math.min(1, Math.max(0, live.level ?? 0))
   const on = level > 0
-  const glow = on ? 0.35 + 0.65 * level : 0
+  const glow = linear ? level : on ? 0.35 + 0.65 * level : 0
   const material = (
     <meshStandardMaterial color={color} emissive={color} emissiveIntensity={glow} transparent opacity={on ? 1 : 0.72} roughness={0.35} />
   )
@@ -30,7 +31,7 @@ export function LedModel({ part, live }: PartModelProps) {
           <cylinderGeometry args={[2.5, 2.5, 7, 16]} />
           {material}
         </mesh>
-        <mesh position={[0, 8, 0]}>
+        <mesh name="led-dome" position={[0, 8, 0]}>
           <sphereGeometry args={[2.5, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
           {material}
         </mesh>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { BuzzerSound } from '../audio/buzzer'
-import { snapshot, syncAnalog } from '../bench/liveControls'
+import { snapshot, syncAnalog, syncDistance } from '../bench/liveControls'
 import { defaultDropPosition } from '../bench/partGeometry'
 import { LazyBench3D, preloadBench3D } from '../bench3d/LazyBench3D'
 import { placeOnTable } from '../bench3d/placement'
@@ -98,6 +98,7 @@ function Simulator() {
   useEffect(() => {
     hw.setParts(bench.parts)
     syncAnalog(hw, bench.parts, sensorValues)
+    syncDistance(hw, bench.parts, sensorValues)
   }, [hw, bench.parts, sensorValues])
 
   const live = useHardwareFrame((s) => snapshot(s, bench.parts, sensorValues), hw)

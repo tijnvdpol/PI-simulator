@@ -6,6 +6,7 @@ export const DRAG_TYPE = 'application/x-pisim-part'
 
 const LABELS: Record<PartKind, string> = {
   led: 'Led', button: 'Knop', buzzer: 'Buzzer', temperature: 'Temperatuursensor', potentiometer: 'Potmeter',
+  pwmled: 'Dimbare led', rgbled: 'RGB-led', servo: 'Servo', distance: 'Afstandssensor', oled: 'OLED-scherm',
 }
 const HINTS: Record<PartKind, string> = {
   led: 'Een lampje dat je aan en uit zet',
@@ -13,6 +14,11 @@ const HINTS: Record<PartKind, string> = {
   buzzer: 'Maakt een piepgeluid',
   temperature: 'Meet hoe warm het is',
   potentiometer: 'Een draaiknop met een stand',
+  pwmled: 'Een led die je kunt dimmen',
+  rgbled: 'Een led met elke kleur die je mengt',
+  servo: 'Een armpje dat naar een hoek draait',
+  distance: 'Meet hoe ver iets weg is',
+  oled: 'Een schermpje van 128×64 punten',
 }
 
 export function PartsTray({ onAdd }: { onAdd?: (kind: PartKind) => void }) {

@@ -15,12 +15,20 @@ describe('EmptyState', () => {
 })
 
 describe('PartsTray', () => {
-  it('toont 5 kaartjes met Nederlandse namen', () => {
+  it('toont 10 kaartjes met Nederlandse namen', () => {
     render(<PartsTray />)
-    for (const name of ['Led', 'Knop', 'Buzzer', 'Temperatuursensor', 'Potmeter']) {
+    for (const name of ['Led', 'Knop', 'Buzzer', 'Temperatuursensor', 'Potmeter', 'Dimbare led', 'RGB-led', 'Servo', 'Afstandssensor', 'OLED-scherm']) {
       expect(screen.getByText(name)).toBeInTheDocument()
     }
-    expect(document.querySelectorAll('[draggable="true"]')).toHaveLength(5)
+    expect(document.querySelectorAll('[draggable="true"]')).toHaveLength(10)
+  })
+  it('de nieuwe onderdelen zitten in de bak en hebben een eigen sleepsoort', () => {
+    render(<PartsTray />)
+    for (const [name, kind] of [['Dimbare led', 'pwmled'], ['RGB-led', 'rgbled'], ['Servo', 'servo'], ['Afstandssensor', 'distance'], ['OLED-scherm', 'oled']]) {
+      const setData = vi.fn()
+      fireEvent.dragStart(screen.getByText(name).closest('[draggable]')!, { dataTransfer: { setData, effectAllowed: '' } })
+      expect(setData).toHaveBeenCalledWith('application/x-pisim-part', kind)
+    }
   })
   it('zet het onderdeelsoort in de sleepdata', () => {
     render(<PartsTray />)

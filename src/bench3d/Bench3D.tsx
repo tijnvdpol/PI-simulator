@@ -5,9 +5,11 @@ import { defaultDropPosition } from '../bench/partGeometry'
 import { DRAG_TYPE } from '../ui/PartsTray'
 import type { BenchProps } from '../bench/benchTypes'
 import { benchWarnings } from '../bench/warnings'
-import { isAnalog as analog } from '../bench/benchState'
+import { issueSummary, partIssues } from '../bench/partStatus'
+import { sliderFor } from '../bench/liveControls'
+import { nextTerminal, terminalsOf } from '../bench/terminals'
 import { pinByGpio, pinByPhysical } from '../pinout/pinout'
-import { PART_KINDS, type Part, type PartKind } from '../project/types'
+import { PART_KINDS, type Connection, type Part, type PartKind } from '../project/types'
 import { BenchOverlays } from './BenchOverlays'
 import { CameraButtons } from './CameraButtons'
 import { VIEWS, type ViewName } from './cameraViews'
@@ -29,6 +31,7 @@ export default function Bench3D({ parts, connecting, error, locked, dispatch, is
   const [selected, setSelected] = useState<string | null>(null)
   const [view, setView] = useState<ViewRequest | null>(null)
   const [hoverPin, setHoverPin] = useState<number | null>(null)
+  const [terminal, setTerminal] = useState('')
   const pressed = useRef<string | null>(null)
   const overlayItems = useRef(new Map<string, HTMLElement>())
   const projectRef = useRef<ClientToTable | null>(null)
@@ -38,8 +41,15 @@ export default function Bench3D({ parts, connecting, error, locked, dispatch, is
   const register = (id: string) => (el: HTMLElement | null) => { if (el) overlayItems.current.set(id, el); else overlayItems.current.delete(id) }
 
   const warnings = useMemo(() => benchWarnings(parts), [parts])
-  const targets = connecting ? selectableTargets({ parts, connecting, error }, connecting) : null
   const connectingPart = parts.find((p) => p.id === connecting)
+  const activeTerminal = connectingPart && terminalsOf(connectingPart.kind).some((t) => t.id === terminal) ? terminal : connectingPart ? nextTerminal(connectingPart.kind, connectingPart.connections) : ''
+  const targets = connecting ? selectableTargets({ parts, connecting, error }, connecting, activeTerminal) : null
+  const issuesByPart = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const p of parts) { const s = issueSummary(p); if (s) m.set(p.id, s) }
+    return m
+  }, [parts])
+  const allIssues = useMemo(() => partIssues(parts), [parts])
   const selectedPart = parts.find((p) => p.id === selected)
   const usedChannels = useMemo(() => parts.flatMap((p) => { const c = p.connections.signal; return c?.type === 'adc' ? [c.channel] : [] }), [parts])
 
@@ -75,8 +85,15 @@ export default function Bench3D({ parts, connecting, error, locked, dispatch, is
 
   const onSelect = useCallback((part: Part) => {
     setSelected(part.id)
+    setTerminal(nextTerminal(part.kind, part.connections))
     dispatch({ type: 'beginConnect', id: part.id })
   }, [dispatch])
+
+  // Kies een pin voor de actieve aansluiting en ga door naar de volgende lege.
+  const connectTo = useCallback((part: Part, target: Connection) => {
+    dispatch({ type: 'connect', id: part.id, terminal: activeTerminal, target })
+    setTerminal(nextTerminal(part.kind, { ...part.connections, [activeTerminal]: target }, activeTerminal))
+  }, [dispatch, activeTerminal])
 
   // Slepen eindigt waar de muis ook losgelaten wordt, ook buiten het canvas.
   useEffect(() => {
@@ -148,7 +165,8 @@ export default function Bench3D({ parts, connecting, error, locked, dispatch, is
           locked={locked}
           selectablePins={targets && targets.pins.length > 0 ? targets.pins : undefined}
           issuePins={issuePins}
-          onPinClick={(physical) => { if (connecting) dispatch({ type: 'connect', id: connecting, target: { type: 'pin', physical } }) }}
+          onPinClick={(physical) => { if (connectingPart) connectTo(connectingPart, { type: 'pin', physical }) }}
+          issuePartIds={allIssues.map((i) => i.partId)}
           overlayItems={overlayItems}
           projectRef={projectRef}
           controlsEnabled={!dragging}
@@ -175,7 +193,8 @@ export default function Bench3D({ parts, connecting, error, locked, dispatch, is
           <div key={part.id} data-overlay={part.id} ref={register(`part:${part.id}`)} className="absolute left-0 top-0" style={{ visibility: 'hidden' }}>
             <PartOverlay
               part={part}
-              slider={sensors && analog(part.kind) ? { value: sensors.values[part.id], onChange: (v) => sensors.onChange(part, v) } : undefined}
+              slider={sensors && sliderFor(part.kind) ? { value: sensors.values[part.id], onChange: (v) => sensors.onChange(part, v) } : undefined}
+              issue={issuesByPart.get(part.id)}
             />
           </div>
         ))}
@@ -197,14 +216,18 @@ export default function Bench3D({ parts, connecting, error, locked, dispatch, is
         selectedPart={selectedPart}
         warnings={warnings}
         issues={issues}
+        partIssues={allIssues}
         dispatch={dispatch}
         onDeselect={() => setSelected(null)}
       />
       {connectingPart && !locked && (
         <PinMenu
           part={connectingPart}
-          targets={targets ?? { pins: [], channels: [] }}
-          onPick={(target) => dispatch({ type: 'connect', id: connectingPart.id, target })}
+          targets={targets ?? { pins: [], channels: [], suggested: [], reasons: {} }}
+          terminal={activeTerminal}
+          onPick={(target) => connectTo(connectingPart, target)}
+          onTerminal={setTerminal}
+          onAuto={() => dispatch({ type: 'autoConnect', id: connectingPart.id })}
           onClose={() => dispatch({ type: 'cancelConnect' })}
         />
       )}

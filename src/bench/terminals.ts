@@ -98,3 +98,11 @@ export function suggestPin(spec: TerminalSpec, taken: ReadonlySet<number>): numb
 
 /** Alle fysieke pinnen die bij deze terminal passen. */
 export const fittingPins = (spec: TerminalSpec): number[] => PINS.filter((p) => pinFit(spec, p.physical).ok).map((p) => p.physical)
+
+/** Welke aansluiting is nu aan de beurt in het pinmenu: de eerstvolgende lege na `current`, anders de eerste lege, anders `current`. */
+export function nextTerminal(kind: PartKind, connections: Record<string, unknown>, current?: string): string {
+  const specs = terminalsOf(kind)
+  const start = current ? specs.findIndex((t) => t.id === current) + 1 : 0
+  const order = [...specs.slice(start), ...specs.slice(0, start)]
+  return order.find((t) => !connections[t.id])?.id ?? current ?? specs[0].id
+}

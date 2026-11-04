@@ -59,3 +59,12 @@ export function partIssues(parts: Part[]): PartIssue[] {
   }
   return out
 }
+
+/** Korte regel voor onder het onderdeel in 3D, of null als alles goed zit. */
+export function issueSummary(part: Part): string | null {
+  const bad = unsuitable(part)
+  if (bad.length > 0) return `${bad[0].spec.label} past niet op deze pin`
+  const missing = missingTerminals(part)
+  if (missing.length === 0) return null
+  return missing.length === terminalsOf(part.kind).length && missing.length === 1 ? 'Nog niet aangesloten' : `Mist: ${missing.map((t) => t.label).join(', ')}`
+}

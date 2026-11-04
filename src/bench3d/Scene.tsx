@@ -25,6 +25,8 @@ export interface SceneProps extends PartHandlers {
   /** Pinnen die nu gekozen mogen worden (bij het aansluiten), anders undefined. */
   selectablePins?: number[]
   issuePins?: number[]
+  /** Onderdelen met een aansluitingsprobleem krijgen een oranje rand. */
+  issuePartIds?: string[]
   onPinClick?: (physical: number) => void
   /** HTML-elementen (labels, tooltip) die op een 3D-plek moeten staan, per id. */
   overlayItems: RefObject<Map<string, HTMLElement>>
@@ -96,6 +98,7 @@ export function Scene(props: SceneProps) {
           part={part}
           live={live(part)}
           selected={part.id === selectedId}
+          issue={props.issuePartIds?.includes(part.id) ?? false}
           locked={locked}
           {...handlers}
         />
