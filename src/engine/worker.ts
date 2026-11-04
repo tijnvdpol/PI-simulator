@@ -19,7 +19,8 @@ async function init(buffer: SharedArrayBuffer) {
   try {
     const state = new HardwareState(buffer)
     const py = await loadPyodide({ indexURL: `${import.meta.env.BASE_URL}pyodide/` })
-    await py.loadPackage(`${import.meta.env.BASE_URL}pyodide/${PILLOW_WHEEL}`) // Pillow voor ImageDraw (OLED)
+    // Pillow voor ImageDraw (OLED). Lukt dit niet, dan werkt alleen het OLED-scherm niet; de rest van de simulator blijft bruikbaar.
+    await py.loadPackage(`${import.meta.env.BASE_URL}pyodide/${PILLOW_WHEEL}`).catch(() => {})
     py.setStdout({ batched: (text) => out.push('stdout', text) })
     py.setStderr({ batched: (text) => out.push('stderr', text) })
     const bridge = bridgeFromState(state, (code, info) => post({ type: 'warn', code, pin: info.pin, device: info.device, found: info.found }))

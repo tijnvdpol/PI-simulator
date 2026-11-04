@@ -32,6 +32,7 @@ const pageErrors = []
 const dialogs = []
 page.on('dialog', (d) => { dialogs.push(d.message()); void d.accept() })
 page.on('pageerror', (e) => pageErrors.push(e.message))
+page.on('console', (m) => { if (/webgl|three|context/i.test(m.text()) && m.type() !== 'log') console.log('CONSOLE', m.type(), m.text().slice(0, 200)) })
 
 const starting = () => page.getByText('Python wordt gestart…')
 const ready = () => starting().waitFor({ state: 'detached', timeout: 90000 })
@@ -154,6 +155,78 @@ try {
     await stopBtn().click(); await ready()
   }
 
+  // ---- fase 2: de zes nieuwe voorbeelden ----
+  const attr = (kind, name) => partBtn(kind).first().getAttribute(name)
+  for (const titel of ['Stoplicht', 'Dimmer', 'Kleurenmixer', 'Servo-wijzer', 'Parkeersensor', 'Weerstation']) {
+    await openExample(titel); await startBtn().click(); await page.waitForTimeout(3000)
+    check(`voorbeeld "${titel}" draait zonder fout`, (await card().count()) === 0 && await stopBtn().isEnabled())
+    if (titel === 'Dimmer') {
+      await page.getByRole('slider', { name: 'Stand van de potmeter' }).fill('100'); await page.waitForTimeout(800)
+      const full = Number(await attr('pwmled', 'data-brightness'))
+      await page.getByRole('slider', { name: 'Stand van de potmeter' }).fill('20'); await page.waitForTimeout(800)
+      const dim = Number(await attr('pwmled', 'data-brightness'))
+      check('dimmer: potmeter bepaalt de helderheid', full > 0.9 && dim > 0.1 && dim < 0.3, `${full} → ${dim}`)
+    }
+    if (titel === 'Kleurenmixer') {
+      const sliders = page.getByRole('slider', { name: 'Stand van de potmeter' })
+      await sliders.nth(0).fill('100'); await sliders.nth(1).fill('0'); await sliders.nth(2).fill('0'); await page.waitForTimeout(800)
+      check('kleurenmixer: potmeters op rood geeft een rode led', (await attr('rgbled', 'data-rgb')) === '1.0,0.0,0.0', String(await attr('rgbled', 'data-rgb')))
+      await shot('kleurenmixer')
+    }
+    if (titel === 'Servo-wijzer') {
+      const s = page.getByRole('slider', { name: 'Stand van de potmeter' })
+      await s.fill('0'); await page.waitForTimeout(800); const left = await attr('servo', 'data-servo')
+      await s.fill('100'); await page.waitForTimeout(800); const right = await attr('servo', 'data-servo')
+      check('servo-wijzer: de arm draait van links naar rechts mee met de potmeter', left === '0.00' && right === '1.00', `${left} → ${right}`)
+      await shot('servo')
+    }
+    if (titel === 'Parkeersensor') {
+      const d = page.getByRole('slider', { name: 'Afstand' })
+      await d.fill('400'); await page.waitForTimeout(600)
+      check('afstandssensor-schuifje loopt tot 400 cm', (await attr('distance', 'data-distance')) === '400')
+      await d.fill('2'); await page.waitForTimeout(600)
+      check('afstandssensor-schuifje loopt tot 2 cm', (await attr('distance', 'data-distance')) === '2')
+      await shot('afstand')
+    }
+    if (titel === 'Weerstation') {
+      const lit = Number(await attr('oled', 'data-lit'))
+      check('weerstation: het OLED-scherm toont tekst', lit > 100, `${lit} pixels aan`)
+      await page.getByRole('slider', { name: 'Temperatuur' }).fill('30'); await page.waitForTimeout(1800)
+      check('weerstation: de pagina blijft tekenen na een nieuw beeld', pageErrors.length === 0)
+      await shot('weerstation')
+    }
+    await stopBtn().click(); await ready()
+  }
+
+  // Een nieuw OLED-scherm: pinmenu per aansluiting, voorstel op SDA/SCL, en melding bij ontbrekende aansluitingen.
+  await typeCode(['pass'])
+  await openExample('Stoplicht')
+  await page.locator('[data-part-id]').first().focus(); await page.keyboard.press('Delete')
+  await dropPart('OLED-scherm', 420, 300)
+  await page.waitForTimeout(400)
+  const oledOverlay = page.locator('[data-overlay]').last()
+  check('een nieuw OLED-scherm krijgt een oranje melding "Mist: …"', (await oledOverlay.innerText()).includes('Mist'), (await oledOverlay.innerText()).replace(/\n/g, ' | '))
+  await partBtn('oled').focus(); await page.keyboard.press('Enter')
+  await menu().waitFor({ timeout: 5000 })
+  check('pinmenu toont de vier aansluitingen van het OLED-scherm', (await page.getByRole('group', { name: 'Aansluitingen' }).getByRole('button').count()) === 4)
+  check('SDA: alleen pin 3 is te kiezen, andere pinnen zijn uit met uitleg', (await page.getByRole('button', { name: 'Pin 11, GPIO 17' }).isDisabled()) && (await page.getByRole('button', { name: 'Pin 11, GPIO 17' }).getAttribute('title')).includes('GPIO 2'))
+  await shot('pinmenu-oled')
+  await page.getByRole('button', { name: 'Sluit alles voorgesteld aan' }).click(); await page.waitForTimeout(300)
+  const label = await oledOverlay.innerText()
+  check('"Sluit alles voorgesteld aan" zet SDA op GPIO 2 en SCL op GPIO 3', label.includes('SDA GPIO 2') && label.includes('SCL GPIO 3') && !label.includes('Mist'), label.replace(/\n/g, ' | '))
+  await page.keyboard.press('Escape')
+  await typeCode(['from luma.core.interface.serial import i2c', 'from luma.core.render import canvas', 'from luma.oled.device import ssd1306', 'oled = ssd1306(i2c(port=1, address=0x3C))', 'with canvas(oled) as draw:', 'draw.text((0, 0), "Hoi!", fill="white")'])
+  await startBtn().click(); await page.waitForTimeout(3000)
+  check('OLED-scherm op SDA/SCL met voeding: tekenen werkt', (await card().count()) === 0 && Number(await attr('oled', 'data-lit')) > 5, `${await attr('oled', 'data-lit')} pixels`)
+  check('het beeld blijft staan nadat het programma klaar is (anders dan op een echte Pi, die het wist)', Number(await attr('oled', 'data-lit')) > 5)
+  // Zonder OLED op de werkbank: Nederlandse uitleg bij DeviceNotFoundError.
+  await partBtn('oled').focus(); await page.keyboard.press('Delete')
+  await startBtn().click()
+  await card().waitFor({ timeout: 15000 })
+  check('geen OLED op de werkbank → uitleg over SDA op pin 3 en SCL op pin 5', (await card().innerText()).includes('pin 3 (GPIO 2)') && (await card().innerText()).includes('pin 5 (GPIO 3)'))
+  await ready()
+
+  console.log('INFO context lost?', await page.evaluate(() => window.__pisimGl.getContext().isContextLost()), 'frames', await frames())
   // Camerastanden en prestaties (met alle onderdelen van het laatste voorbeeld in beeld).
   await openExample('Temperatuuralarm')
   for (const [label, name] of [['Bovenaanzicht', 'boven'], ['Schuin', 'schuin'], ['Pinnen dichtbij', 'pinnen'], ['Reset', 'reset']]) {
@@ -191,7 +264,8 @@ try {
   await filePage.goto(`file://${process.cwd()}/dist/index.html`)
   check('file:// toont een uitleg in plaats van een lege pagina', (await filePage.locator('#root').innerText()).includes('niet als los bestand'))
 } catch (e) {
-  check('rooktest zonder uitzondering', false, String(e?.message ?? e).split('\n')[0])
+  await shot('fout')
+  check('rooktest zonder uitzondering', false, String(e?.message ?? e).split('\n').slice(0, 6).join(' / '))
 } finally {
   await browser.close()
   server?.kill()

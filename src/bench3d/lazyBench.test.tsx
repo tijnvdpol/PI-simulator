@@ -1,10 +1,28 @@
 // @vitest-environment jsdom
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
-import { hasWebGL } from './webgl'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { hasWebGL, resetWebGLCheck } from './webgl'
 import { LazyBench3D, NoWebGLNotice, loadBench3D, preloadBench3D } from './LazyBench3D'
 
 describe('hasWebGL', () => {
+  beforeEach(() => resetWebGLCheck())
+  it('test maar één keer en geeft de testcontext vrij: LazyBench3D roept dit bij elke render aan, en elke browser staat maar ~16 WebGL-contexten toe (daarna sneuvelt de echte werkbank)', () => {
+    const real = document.createElement.bind(document)
+    const lose = vi.fn()
+    const made = vi.fn()
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string, o?: ElementCreationOptions) => {
+      const el = real(tag, o)
+      if (tag === 'canvas') {
+        made()
+        ;(el as HTMLCanvasElement).getContext = (() => ({ getExtension: (n: string) => (n === 'WEBGL_lose_context' ? { loseContext: lose } : null) })) as never
+      }
+      return el
+    })
+    for (let i = 0; i < 50; i++) expect(hasWebGL()).toBe(true)
+    expect(made).toHaveBeenCalledTimes(1)
+    expect(lose).toHaveBeenCalledTimes(1)
+    vi.restoreAllMocks()
+  })
   it('is false als de browser geen WebGL-context geeft (jsdom)', () => {
     expect(hasWebGL()).toBe(false)
   })

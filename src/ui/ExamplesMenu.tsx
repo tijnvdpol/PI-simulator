@@ -14,13 +14,13 @@ export function ExamplesMenu({ open, onClose, onPick }: { open: boolean; onClose
   const focus = useDialogFocus(open)
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-ink/70 p-8 pt-24" onClick={onClose}>
-      <div role="dialog" aria-label="Voorbeelden" ref={focus.ref} onKeyDown={focus.onKeyDown} className="w-full max-w-xl rounded-ui border border-line bg-panel p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-ink/70 p-8 pt-16" onClick={onClose}>
+      <div role="dialog" aria-label="Voorbeelden" ref={focus.ref} onKeyDown={focus.onKeyDown} className="flex max-h-[calc(100vh-6rem)] w-full max-w-xl flex-col rounded-ui border border-line bg-panel p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Kies een voorbeeld</h2>
           <button type="button" onClick={onClose} className="rounded-ui px-2 py-1 text-fg-muted transition-colors duration-(--dur) hover:bg-line">Sluiten</button>
         </div>
-        <ul className="flex flex-col gap-3">
+        <ul className="flex min-h-0 flex-col gap-3 overflow-y-auto pr-1">
           {EXAMPLES.map((e) => (
             <li key={e.id}>
               <button
