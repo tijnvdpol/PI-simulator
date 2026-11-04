@@ -18,6 +18,7 @@ import { ProIssues, ProProperties, ProToolbar, ProWireProperties } from './ProPa
 import type { ProLive } from './ProParts'
 import { ProScene, type BurnSpot } from './ProScene'
 import { Effects } from '../env/Effects'
+import { sceneTriangles } from '../sceneStats'
 import { Workshop } from '../env/Workshop'
 import { PRO_VIEWS } from './views'
 
@@ -59,6 +60,7 @@ export default function ProBench3D(props: ProBenchProps) {
   const [view, setView] = useState<ViewRequest | null>(null)
   const [dragging, setDragging] = useState(false)
   const [burns, setBurns] = useState<BurnSpot[]>([])
+  const [listOpen, setListOpen] = useState(true)
   const projectRef = useRef<ClientToTable | null>(null)
   const box = useRef<HTMLDivElement>(null)
   const mouse = useRef({ x: 0, y: 0 })
@@ -214,7 +216,7 @@ export default function ProBench3D(props: ProBenchProps) {
       <Canvas
         frameloop="demand" shadows dpr={[1, 2]}
         camera={{ position: [...PRO_VIEWS.reset.position], fov: 40, near: 1, far: 900 }}
-        onCreated={({ gl }) => { if (DEBUG) (window as unknown as { __pisimGl?: unknown }).__pisimGl = gl }}
+        onCreated={({ gl, scene }) => { if (DEBUG) { const w = window as unknown as { __pisimGl?: unknown; __pisimTriangles?: () => number }; w.__pisimGl = gl; w.__pisimTriangles = () => sceneTriangles(scene) } }}
       >
         <Workshop center={[PRO_TABLE.cx, PRO_TABLE.cz]} area={{ w: PRO_TABLE.width, d: PRO_TABLE.depth }} />
         <Effects focus={[PRO_TABLE.cx, 0, PRO_TABLE.cz]} />
@@ -271,8 +273,16 @@ export default function ProBench3D(props: ProBenchProps) {
 
       {(analogParts.length > 0 || buttons.length > 0 || circuit.parts.length > 0) && (
         <section aria-label="Bediening" className="pointer-events-auto absolute bottom-14 right-3 flex max-h-[45%] w-64 flex-col gap-2 overflow-y-auto rounded-ui border border-line bg-panel/95 p-3 text-sm">
-          <h3 className="font-semibold text-fg-muted">Onderdelen</h3>
-          <ul aria-label="Onderdelen op het breadboard" className="flex flex-col gap-1.5">
+          <h3 className="font-semibold text-fg-muted">
+            <button
+              type="button" aria-expanded={listOpen} aria-controls="pro-parts-list" onClick={() => setListOpen((o) => !o)}
+              className="flex w-full items-center justify-between rounded-ui text-left hover:text-fg focus-visible:outline-2 focus-visible:outline-accent"
+            >
+              Onderdelen <span aria-hidden>{listOpen ? '▾' : '▸'}</span>
+              <span className="sr-only">{listOpen ? ' (inklappen)' : ' (uitklappen)'}</span>
+            </button>
+          </h3>
+          <ul id="pro-parts-list" hidden={!listOpen} aria-label="Onderdelen op het breadboard" className="flex flex-col gap-1.5">
             {circuit.parts.map((p) => (
               <li key={p.id} className="flex items-center justify-between gap-2">
                 <button

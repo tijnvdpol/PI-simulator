@@ -37,9 +37,9 @@ export function Effects({ focus }: { focus: [number, number, number] }) {
   return (
     <>
       <EffectComposer enableNormalPass multisampling={4}>
-        <SSAO samples={21} rings={5} radius={0.06} intensity={18} luminanceInfluence={0.5} bias={0.02} worldDistanceThreshold={80} worldDistanceFalloff={30} worldProximityThreshold={4} worldProximityFalloff={2} />
+        <SSAO samples={31} rings={6} radius={0.06} intensity={11} luminanceInfluence={0.5} bias={0.02} worldDistanceThreshold={80} worldDistanceFalloff={30} worldProximityThreshold={4} worldProximityFalloff={2} />
         <Bloom mipmapBlur luminanceThreshold={1} luminanceSmoothing={0.2} intensity={0.9} radius={0.7} />
-        <DepthOfField target={focusPoint} focalLength={0.06} focusRange={0.14} bokehScale={1.4} height={540} />
+        <DepthOfField target={focusPoint} focusRange={110} bokehScale={2.2} height={540} />
         <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
       </EffectComposer>
       <AutoQuality />

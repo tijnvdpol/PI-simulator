@@ -215,7 +215,7 @@ export function Workshop({ center, area = { w: TABLE_W, d: TABLE_D } }: { center
         shadow-camera-far={520}
       />
       <Suspense fallback={null}>
-        <Environment files={HDRI_URL} background={high} backgroundBlurriness={0.55} backgroundIntensity={0.45} environmentIntensity={0.55} />
+        <Environment files={HDRI_URL} background={high} backgroundBlurriness={0.55} backgroundIntensity={0.45} environmentIntensity={0.8} />
       </Suspense>
       {high && <ContactShadows position={[cx, 0.06, cz]} scale={[area.w + 60, area.d + 60]} opacity={0.55} blur={2.4} far={22} resolution={1024} color={p.ink} />}
     </>

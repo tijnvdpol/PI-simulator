@@ -67,7 +67,7 @@ export function PinHeader({ selectable, issuePins, clickAll, marked, onPinClick,
     <group name="pin-header">
       <instancedMesh ref={pins} args={[undefined, undefined, 40]} name="pins">
         <boxGeometry args={[HEADER.pinSize, HEADER.pinTop, HEADER.pinSize]} />
-        <meshStandardMaterial roughness={0.4} metalness={0.3} />
+        <meshStandardMaterial roughness={0.28} metalness={0.95} />
       </instancedMesh>
       <instancedMesh
         ref={hits}

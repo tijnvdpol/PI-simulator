@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef } from 'react'
+import { RoundedBox } from '@react-three/drei'
 import { Object3D, type InstancedMesh } from 'three'
 import { CHIP_DIM, chipPinLocal } from '../anchors'
 import { usePalette } from '../palette'
@@ -21,10 +22,9 @@ export function Mcp3008Model({ usedChannels = [] }: { usedChannels?: number[] })
   }, [])
   return (
     <group name="mcp3008" userData={{ usedChannels }}>
-      <mesh position={[0, 1 + CHIP_DIM.height / 2, 0]}>
-        <boxGeometry args={[CHIP_DIM.width, CHIP_DIM.height, CHIP_DIM.length]} />
-        <meshStandardMaterial color={p.ink} roughness={0.6} />
-      </mesh>
+      <RoundedBox args={[CHIP_DIM.width, CHIP_DIM.height, CHIP_DIM.length]} radius={0.3} smoothness={3} position={[0, 1 + CHIP_DIM.height / 2, 0]} castShadow receiveShadow>
+        <meshStandardMaterial color={p.ink} roughness={0.5} />
+      </RoundedBox>
       {/* inkeping bij pin 1 */}
       <mesh position={[0, 1 + CHIP_DIM.height + 0.02, -CHIP_DIM.length / 2 + 1]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[0.7, 10]} />
@@ -32,7 +32,7 @@ export function Mcp3008Model({ usedChannels = [] }: { usedChannels?: number[] })
       </mesh>
       <instancedMesh ref={legs} args={[undefined, undefined, 16]}>
         <boxGeometry args={[0.5, 2.5, 0.5]} />
-        <meshStandardMaterial color={p.metal} metalness={0.8} roughness={0.4} />
+        <meshStandardMaterial color={p.metal} metalness={1} roughness={0.3} />
       </instancedMesh>
     </group>
   )

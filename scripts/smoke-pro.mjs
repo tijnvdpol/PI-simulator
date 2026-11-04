@@ -93,6 +93,17 @@ try {
   check('met een weerstand brandt de led', await waitStatus('p2', 'on'))
   await shot('pro-led-aan')
 
+  const tri = await page.evaluate(() => window.__pisimTriangles())
+  check('pro-scène blijft ruim onder 200.000 driehoeken', tri < 200000, `${tri} driehoeken (basis, zonder extra schaduw-/nabewerkingsrondes)`)
+
+  // Het paneel "Onderdelen" is inklapbaar, zodat het de werkbank niet afdekt.
+  const toggle = page.getByRole('button', { name: /^Onderdelen/ })
+  const partList = page.locator('ul[aria-label="Onderdelen op het breadboard"]')
+  await toggle.click()
+  check('paneel Onderdelen klapt in', !(await partList.isVisible()) && (await toggle.getAttribute('aria-expanded')) === 'false')
+  await toggle.click()
+  check('paneel Onderdelen klapt weer uit', (await partList.isVisible()) && (await toggle.getAttribute('aria-expanded')) === 'true')
+
   // Undo/redo.
   await stopBtn().click(); await ready()
   await page.mouse.click(10, 500) // focus buiten invoer

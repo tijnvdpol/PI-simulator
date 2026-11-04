@@ -163,7 +163,9 @@ try {
   }
   check('de vier camerastanden zijn te kiezen zonder fouten', pageErrors.length === 0)
   const info = await page.evaluate(() => { const i = window.__pisimGl.info; return { calls: i.render.calls, triangles: i.render.triangles, geometries: i.memory.geometries, textures: i.memory.textures } })
-  check('scène is licht: weinig tekenaanroepen en driehoeken', info.calls < 150 && info.triangles < 60000, `${info.calls} tekenaanroepen, ${info.triangles} driehoeken, ${info.geometries} geometrieën`)
+  check('scène is licht: weinig tekenaanroepen en driehoeken', info.calls < 220 && info.triangles < 120000, `${info.calls} tekenaanroepen, ${info.triangles} driehoeken, ${info.geometries} geometrieën`)
+  const tri = await page.evaluate(() => window.__pisimTriangles())
+  check('simpele scène blijft ruim onder 200.000 driehoeken', tri < 200000, `${tri} driehoeken`)
   const box = await page.locator('canvas').boundingBox()
   // Software-WebGL is grillig; de beste van drie pogingen telt.
   let fps = 0
@@ -185,6 +187,22 @@ try {
   check('technische melding is ingeklapt', !(await page.locator('details').first().evaluate((d) => d.open)))
   check('app vraagt bevestiging voordat niet-opgeslagen werk wordt vervangen', dialogs.some((m) => m.includes('nog niet hebt opgeslagen')))
   check('geen onverwachte pagina-fouten', pageErrors.length === 0, pageErrors.join(' | '))
+  // Showroom: elk onderdeel los te bekijken, in de stand Laag (software-WebGL).
+  const showPage = await browser.newPage({ viewport: { width: 1200, height: 800 } })
+  await showPage.addInitScript(() => { try { localStorage.setItem('pisim.quality', 'low') } catch { /* geen opslag */ } })
+  const showErrors = []
+  showPage.on('pageerror', (e) => showErrors.push(e.message))
+  await showPage.goto(`${BASE}/showroom`)
+  await showPage.getByRole('heading', { name: 'Showroom' }).waitFor({ timeout: 30000 })
+  const items = showPage.getByRole('navigation', { name: 'Onderdelen' }).getByRole('button')
+  check('showroom: alle onderdelen staan in de lijst', (await items.count()) >= 10, `${await items.count()} onderdelen`)
+  for (const name of ['Raspberry Pi 4/5', 'Breadboard', 'Led (5 mm)', 'Breadboard met schakeling']) {
+    await showPage.getByRole('navigation', { name: 'Onderdelen' }).getByRole('button', { name, exact: true }).click()
+    await showPage.waitForTimeout(1200)
+  }
+  await showPage.locator('canvas').waitFor()
+  check('showroom: onderdelen bekijken geeft geen fouten', showErrors.length === 0, showErrors.join(' | '))
+  await showPage.close()
   // Zonder WebGL: een nette Nederlandse melding.
   const noGl = await chromium.launch({ args: ['--disable-3d-apis', '--disable-gpu', '--disable-software-rasterizer'] })
   const noGlPage = await noGl.newPage({ viewport: { width: 1440, height: 860 } })

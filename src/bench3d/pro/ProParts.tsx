@@ -5,6 +5,7 @@ import { resistorBands } from '../../circuit/resistor'
 import type { ProPart } from '../../circuit/types'
 import type { PartResult } from '../../circuit/analyze'
 import { usePalette } from '../palette'
+import { LedBody, ResistorBody, ButtonBody, BuzzerBody, Temperature92Body, TrimmerBody, Leg } from '../models/bodies'
 import { BB_TOP, holeXZ, partCenter } from './layout'
 
 export interface ProLive extends Partial<PartResult> {
@@ -21,108 +22,78 @@ export interface ProPartHandlers {
   onClick?: (part: ProPart, e: ThreeEvent<MouseEvent>) => void
 }
 
-interface Pt { x: number; z: number }
+type V3 = readonly [number, number, number]
+interface LegLocal { name: string; x: number; z: number }
 
-/** Een pootje van het gaatje omhoog (lengte in mm boven het bord; metaal). */
-function Leg({ at, len }: { at: Pt; len: number }) {
-  const p = usePalette()
-  return (
-    <mesh position={[at.x, BB_TOP + len / 2 - 2, at.z]}>
-      <boxGeometry args={[0.5, len + 4, 0.5]} />
-      <meshStandardMaterial color={p.metal} metalness={0.8} roughness={0.4} />
-    </mesh>
-  )
-}
-
-function Led({ part, live }: { part: ProPart; live: ProLive }) {
+/** Led: pootjes door de gaatjes, epoxy er bovenop. Kapot = zwart en dof. */
+function Led({ part, live, legs }: { part: ProPart; live: ProLive; legs: LegLocal[] }) {
   const p = usePalette()
   const color = p[`led-${part.color ?? 'red'}`]
   const burnt = !!live.burnt
   const level = burnt ? 0 : Math.min(1, Math.max(0, live.level ?? 0))
   const on = level > 0
-  const base = burnt ? p.ink : color
-  const mat = <meshStandardMaterial color={base} emissive={base} emissiveIntensity={on ? 0.35 + 0.65 * level : 0} transparent={!burnt} opacity={on || burnt ? 1 : 0.72} roughness={burnt ? 0.9 : 0.35} />
   return (
     <group name="led" userData={{ glow: on ? 'on' : 'off', burnt }}>
-      <mesh position={[0, 6.5, 0]}><cylinderGeometry args={[2.9, 2.9, 1, 16]} />{mat}</mesh>
-      <mesh position={[0, 10.5, 0]}><cylinderGeometry args={[2.5, 2.5, 7, 16]} />{mat}</mesh>
-      <mesh position={[0, 14, 0]}><sphereGeometry args={[2.5, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />{mat}</mesh>
+      {legs.map((l) => {
+        const s = l.name === 'anode' ? -1 : 1
+        return <Leg key={l.name} points={[[l.x, -3, l.z], [l.x, 2.5, l.z], [l.x - s * 0.22, 4.2, l.z], [l.x, 5.9, l.z], [l.x, 6.4, l.z]]} />
+      })}
+      <group position={[0, 6, 0]}><LedBody color={color} level={level} burnt={burnt} /></group>
       <pointLight name="led-light" position={[0, 18, 0]} color={color} intensity={level * 400} distance={60} decay={2} />
     </group>
   )
 }
 
-function Resistor({ part, span }: { part: ProPart; span: number }) {
-  const p = usePalette()
+/** Weerstand: beige lichaam met kleurringen, pootjes haaks omlaag de gaatjes in. */
+function Resistor({ part, span, legs }: { part: ProPart; span: number; legs: LegLocal[] }) {
   const bands = resistorBands(part.resistance ?? 330)
-  const half = span / 2
   const bodyLen = Math.min(6.3, span - 2)
-  const xs = [-0.3, -0.1, 0.1, 0.35].map((f) => f * bodyLen * 0.95)
+  const half = span / 2
   return (
     <group name="resistor" userData={{ bands }}>
-      <mesh position={[0, 3.6, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[1.25, 1.25, bodyLen, 14]} />
-        <meshStandardMaterial color={p.resistor} roughness={0.7} />
-      </mesh>
-      {bands.map((b, i) => (
-        <mesh key={i} name={`band-${i}`} position={[xs[i] + (i === 3 ? bodyLen * 0.1 : 0), 3.6, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[1.3, 1.3, 0.55, 14]} />
-          <meshStandardMaterial color={p[`band-${b}`]} roughness={0.6} />
-        </mesh>
-      ))}
-      {[-1, 1].map((s) => (
-        <mesh key={s} position={[s * (bodyLen / 2 + (half - bodyLen / 2) / 2), 3.6, 0]}>
-          <boxGeometry args={[half - bodyLen / 2, 0.45, 0.45]} />
-          <meshStandardMaterial color={p.metal} metalness={0.8} roughness={0.4} />
-        </mesh>
+      <group position={[0, 3.6, 0]}><ResistorBody bands={bands} length={bodyLen} /></group>
+      {[-1, 1].map((sg) => (
+        <Leg key={sg} points={[[sg * (bodyLen / 2 - 0.2), 3.6, 0], [sg * (half - 0.9), 3.6, 0], [sg * half, 2.6, legs[0] ? 0 : 0], [sg * half, 0.5, 0], [sg * half, -3, 0]]} />
       ))}
     </group>
   )
 }
 
-function Button({ live, size }: { live: ProLive; size: { w: number; d: number } }) {
-  const p = usePalette()
+function Button({ live, size, legs }: { live: ProLive; size: { w: number; d: number }; legs: LegLocal[] }) {
   const pressed = !!live.pressed
   return (
     <group name="button" userData={{ pressed }}>
-      <mesh position={[0, 3, 0]}><boxGeometry args={[Math.max(6, size.w), 3.5, Math.max(6, size.d)]} /><meshStandardMaterial color={p.ink} roughness={0.7} /></mesh>
-      <mesh name="button-cap" position={[0, 5.5 - (pressed ? 0.8 : 0), 0]}><cylinderGeometry args={[1.75, 1.75, 1.5, 14]} /><meshStandardMaterial color={p['fg-muted']} roughness={0.5} /></mesh>
+      {legs.map((l) => <Leg key={l.name} points={[[l.x * 0.9, 2.6, l.z * 0.9], [l.x, 1.8, l.z], [l.x, 0.4, l.z], [l.x, -3, l.z]]} radius={0.25} />)}
+      <ButtonBody pressed={pressed} w={Math.max(6, size.w)} d={Math.max(6, size.d)} />
     </group>
   )
 }
 
-function Buzzer({ live }: { live: ProLive }) {
-  const p = usePalette()
+function Buzzer({ live, legs }: { live: ProLive; legs: LegLocal[] }) {
   const on = (live.level ?? 0) > 0
   return (
     <group name="buzzer" userData={{ active: on }}>
-      <mesh position={[0, 5.5, 0]}><cylinderGeometry args={[6, 6, 8, 20]} /><meshStandardMaterial color={p.ink} roughness={0.7} /></mesh>
-      <mesh position={[0, 9.6, 0]}><cylinderGeometry args={[1.2, 1.2, 0.3, 12]} /><meshStandardMaterial color={on ? p.accent : p['metal-dark']} emissive={on ? p.accent : p.ink} emissiveIntensity={on ? 0.8 : 0} /></mesh>
-      <mesh position={[-3.8, 9.7, 0]}><boxGeometry args={[1.6, 0.2, 0.4]} /><meshStandardMaterial color={p.gold} /></mesh>
+      {legs.map((l) => <Leg key={l.name} points={[[l.x, -3, l.z], [l.x, 0, l.z], [l.x, 1.5, l.z]]} />)}
+      <group position={[0, 1, 0]}><BuzzerBody active={on} /></group>
     </group>
   )
 }
 
-function Temperature() {
-  const p = usePalette()
+function Temperature({ legs }: { legs: LegLocal[] }) {
   return (
-    <mesh name="temperature" position={[0, 3.2, 0]} rotation={[0, Math.PI / 2, 0]}>
-      <cylinderGeometry args={[2.4, 2.4, 4.6, 16, 1, false, 0, Math.PI]} />
-      <meshStandardMaterial color={p.ink} roughness={0.7} />
-    </mesh>
+    <group name="temperature">
+      {legs.map((l) => <Leg key={l.name} points={[[l.x, -3, l.z], [l.x, 1, l.z + 0.2], [l.x, 2.2, l.z]]} radius={0.26} />)}
+      <group position={[0, 2, 0]}><Temperature92Body /></group>
+    </group>
   )
 }
 
-function Potentiometer({ live }: { live: ProLive }) {
-  const p = usePalette()
+function Potentiometer({ live, legs }: { live: ProLive; legs: LegLocal[] }) {
   const pos = live.position ?? 0.5
   return (
     <group name="potentiometer">
-      <mesh position={[0, 4.5, 0]}><boxGeometry args={[10, 5, 9.5]} /><meshStandardMaterial color={p['wire-blue']} roughness={0.6} /></mesh>
-      <group position={[0, 8.2, 0]} rotation={[0, -(pos - 0.5) * Math.PI * 1.5, 0]}>
-        <mesh><cylinderGeometry args={[3.2, 3.2, 2.2, 18]} /><meshStandardMaterial color={p.metal} metalness={0.7} roughness={0.4} /></mesh>
-        <mesh position={[0, 1.2, 0]}><boxGeometry args={[5.6, 0.4, 0.8]} /><meshStandardMaterial color={p['metal-dark']} /></mesh>
-      </group>
+      {legs.map((l) => <Leg key={l.name} points={[[l.x, -3, l.z], [l.x, 0.5, l.z], [l.x, 1.2, l.z]]} />)}
+      <TrimmerBody angle={-(pos - 0.5) * Math.PI * 1.5} />
     </group>
   )
 }
@@ -143,7 +114,12 @@ export function ProPartView({ part, live, selected, handlers }: { part: ProPart;
   const xs = legs.map((l) => l.x)
   const zs = legs.map((l) => l.z)
   const size = { w: Math.max(...xs) - Math.min(...xs) + 1.2, d: Math.max(...zs) - Math.min(...zs) + 1.2 }
-  const legLen = (name: string) => (part.kind === 'led' ? (name === 'anode' ? 6.5 : 5.2) : part.kind === 'resistor' ? 3.6 : part.kind === 'button' ? 3 : part.kind === 'buzzer' ? 1.5 : 2)
+  // Poten in de lokale coördinaten van het onderdeel (de groep is gedraaid over `angle`).
+  const local: LegLocal[] = legs.map((l) => {
+    const dx = l.x - c.x
+    const dz = l.z - c.z
+    return { name: l.name, x: dx * Math.cos(angle) - dz * Math.sin(angle), z: dx * Math.sin(angle) + dz * Math.cos(angle) }
+  })
   // Het klikvlak is zo groot als het huis van het onderdeel, zodat de gaatjes eromheen klikbaar blijven.
   const body: Record<ProPart['kind'], { w: number; d: number; h: number; y: number }> = {
     led: { w: 6, d: 6, h: 12, y: 11 },
@@ -156,14 +132,13 @@ export function ProPartView({ part, live, selected, handlers }: { part: ProPart;
   const hit = body[part.kind]
   return (
     <group name={`part-${part.id}`} userData={{ partId: part.id, kind: part.kind }}>
-      {legs.map((l) => <Leg key={l.name} at={l} len={legLen(l.name)} />)}
       <group position={[c.x, BB_TOP, c.z]} rotation={[0, angle, 0]}>
-        {part.kind === 'led' && <Led part={part} live={live} />}
-        {part.kind === 'resistor' && <Resistor part={part} span={span} />}
-        {part.kind === 'button' && <Button live={live} size={size} />}
-        {part.kind === 'buzzer' && <Buzzer live={live} />}
-        {part.kind === 'temperature' && <Temperature />}
-        {part.kind === 'potentiometer' && <Potentiometer live={live} />}
+        {part.kind === 'led' && <Led part={part} live={live} legs={local} />}
+        {part.kind === 'resistor' && <Resistor part={part} span={span} legs={local} />}
+        {part.kind === 'button' && <Button live={live} size={size} legs={local} />}
+        {part.kind === 'buzzer' && <Buzzer live={live} legs={local} />}
+        {part.kind === 'temperature' && <Temperature legs={local} />}
+        {part.kind === 'potentiometer' && <Potentiometer live={live} legs={local} />}
       </group>
       {selected && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[c.x, BB_TOP + 0.25, c.z]} name="selection">
