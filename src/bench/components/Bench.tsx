@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { type PinIssue } from '../../engine/explainError'
-import { pinByGpio } from '../../pinout/pinout'
+import { pinByGpio, pinByPhysical } from '../../pinout/pinout'
 import { DRAG_TYPE } from '../../ui/PartsTray'
 import { LED_COLORS, PART_KINDS, type LedColor, type Part, type PartKind } from '../../project/types'
 import { PART_NAMES_NL, isAnalog, selectableTargets, type BenchAction } from '../benchState'
@@ -55,6 +55,15 @@ function toSvgPoint(svg: SVGSVGElement, clientX: number, clientY: number) {
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
+
+/** Bijv. " · GPIO 17": zo zie je welk nummer je in je code moet gebruiken. */
+function placeLabel(part: Part): string {
+  const c = part.connection
+  if (!c) return ''
+  if (c.type === 'adc') return ` · kanaal ${c.channel}`
+  const g = pinByPhysical(c.physical).gpio
+  return g === null ? '' : ` · GPIO ${g}`
+}
 
 function SensorSlider({ part, value, onChange }: { part: Part; value: number | undefined; onChange: (v: number) => void }) {
   const isTemp = part.kind === 'temperature'
@@ -227,7 +236,7 @@ export function Bench({ parts, connecting, error, locked, dispatch, issues = [],
               {isSel && <rect x="-40" y="-40" width="80" height="96" rx="8" fill="none" className="stroke-accent" strokeWidth="2" strokeDasharray="5 4" />}
               <rect x="-36" y="-36" width="72" height="88" fill="transparent" />
               <PartArt part={part} live={live?.(part) ?? {}} />
-              <text y="66" textAnchor="middle" fontSize="11" className="fill-fg-muted">{PART_NAMES_NL[part.kind]}</text>
+              <text y="66" textAnchor="middle" fontSize="11" className="fill-fg-muted">{PART_NAMES_NL[part.kind]}{placeLabel(part)}</text>
               {sensors && isAnalog(part.kind) && (
                 <SensorSlider part={part} value={sensors.values[part.id]} onChange={(v) => sensors.onChange(part, v)} />
               )}

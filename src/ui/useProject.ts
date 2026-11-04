@@ -6,8 +6,15 @@ import type { Project } from '../project/types'
 export const STARTER_CODE = `from gpiozero import LED
 from time import sleep
 
-# Hier komt jouw programma.
-# Sleep eerst een led naar de werkbank en verbind hem met een pin.
+# Sleep een led naar de werkbank en verbind hem met pin 11 (GPIO17).
+# Druk daarna op Start om hem te laten knipperen.
+led = LED(17)
+
+while True:
+    led.on()
+    sleep(1)
+    led.off()
+    sleep(1)
 `
 
 /** Houdt het hele project (onderdelen + code + naam) bij; één bron van waarheid voor de UI. */
