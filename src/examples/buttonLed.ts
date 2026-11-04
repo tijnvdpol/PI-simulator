@@ -1,7 +1,8 @@
 import type { Project } from '../project/types'
 
 export const buttonLed: Project = {
-  version: 1,
+  version: 2,
+  mode: 'simple',
   name: 'Knop schakelt led',
   parts: [
     { id: 'part-1', kind: 'led', x: 380, y: 140, color: 'green', connection: { type: 'pin', physical: 11 } },

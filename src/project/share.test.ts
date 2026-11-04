@@ -3,7 +3,7 @@ import { buildShareUrl, decodeShare, encodeShare } from './share'
 import type { Project } from './types'
 
 const p: Project = {
-  version: 1, name: 'Deel', code: 'from gpiozero import LED\nLED(17).on()\n',
+  version: 2, mode: 'simple', name: 'Deel', code: 'from gpiozero import LED\nLED(17).on()\n',
   parts: [{ id: 'a', kind: 'led', x: 1, y: 2, color: 'red', connection: { type: 'pin', physical: 11 } }],
 }
 

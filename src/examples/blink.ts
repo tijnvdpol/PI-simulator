@@ -1,7 +1,8 @@
 import type { Project } from '../project/types'
 
 export const blink: Project = {
-  version: 1,
+  version: 2,
+  mode: 'simple',
   name: 'Knipperende led',
   parts: [{ id: 'part-1', kind: 'led', x: 420, y: 140, color: 'red', connection: { type: 'pin', physical: 11 } }],
   code: `from gpiozero import LED

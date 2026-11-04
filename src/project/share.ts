@@ -1,9 +1,9 @@
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string'
-import { parseProject, serializeProject } from './parse'
+import { parseProject, serializeCompact } from './parse'
 import type { Project, Result } from './types'
 
 export function encodeShare(p: Project): string {
-  return compressToEncodedURIComponent(serializeProject(p))
+  return compressToEncodedURIComponent(serializeCompact(p))
 }
 
 export function buildShareUrl(p: Project, base: string): string {
