@@ -34,6 +34,7 @@ npm run build && node scripts/smoke.mjs
 - **Stop** beëindigt de worker (ook bij een oneindige lus) en start meteen een nieuwe; alle onderdelen gaan uit.
 - Pyodide heeft geen threads. `blink()`, `beep()`, `when_pressed` en `pause()` draaien daarom op een eigen scheduler
   (`src/python/gpiozero/_scheduler.py`) terwijl je code wacht in `sleep()` of `pause()`.
+- Beperking: omdat er geen threads zijn, lopen `blink()`/`beep()`/`when_pressed` alleen vooruit zolang je code wacht (`sleep`, `pause`, `wait_for_press`). Een lus zonder `sleep` laat ze stilstaan; zet er een korte `sleep(0.01)` in.
 - De nep-gpiozero kent `LED`, `Button`, `Buzzer` en `MCP3008`. Temperatuursensor en potmeter zijn analoge onderdelen op een
   MCP3008-kanaal: `(MCP3008(channel=0).voltage - 0.5) * 100` geeft graden Celsius.
 - Projecten worden opgeslagen in `localStorage`, kunnen als bestand worden gedownload/geïmporteerd en gedeeld via een link

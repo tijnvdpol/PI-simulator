@@ -16,11 +16,13 @@ const rawFor = (part: Part, value: number) => (part.kind === 'temperature' ? cel
 
 /** Zet de sensorwaarden van de werkbank in het gedeelde geheugen (kanalen zonder onderdeel gaan op 0). */
 export function syncAnalog(state: HardwareState, parts: Part[], values: Record<string, number>): void {
-  for (let c = 0; c < ADC_CHANNELS; c++) state.setAdcRaw(c, 0)
+  // Eerst de eindwaarden bepalen, dan elk kanaal één keer schrijven: een tussenstand 0 zou een lopend programma kunnen lezen.
+  const target = new Array<number>(ADC_CHANNELS).fill(0)
   for (const p of parts) {
     if (p.connection?.type !== 'adc') continue
-    state.setAdcRaw(p.connection.channel, rawFor(p, values[p.id] ?? defaultSensorValue(p.kind)))
+    target[p.connection.channel] = rawFor(p, values[p.id] ?? defaultSensorValue(p.kind))
   }
+  target.forEach((raw, c) => state.setAdcRaw(c, raw))
 }
 
 const gpioOf = (p: Part): number | null => (p.connection?.type === 'pin' ? pinByPhysical(p.connection.physical).gpio : null)

@@ -10,7 +10,7 @@ class Button(Device):
     """Drukknop. `pull_up`, `bounce_time` en `hold_time` worden aanvaard voor compatibiliteit."""
     _part_kind = "button"
 
-    def __init__(self, pin=None, *, pull_up=True, active_state=None, bounce_time=None, hold_time=1, hold_repeat=False):
+    def __init__(self, pin=None, *, pull_up=True, active_state=None, bounce_time=None, hold_time=1, hold_repeat=False, pin_factory=None):
         super().__init__(pin)
         self.pull_up = pull_up
         self.hold_time = hold_time
@@ -21,6 +21,7 @@ class Button(Device):
 
     @property
     def is_pressed(self):
+        self._check_open()
         return bool(_hw.readButton(self._pin))
 
     @property

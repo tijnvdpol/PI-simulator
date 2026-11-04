@@ -53,28 +53,36 @@ const GROUPS: Record<string, { titel: string; rules: Rule[]; fallback: string }>
   IndentationError: { titel: 'Inspringing klopt niet', rules: indentRules, fallback: 'de inspringing van deze regel klopt niet.' },
   SyntaxError: { titel: 'Schrijffout in je code', rules: syntaxRules, fallback: 'Python begrijpt deze regel niet. Controleer op typfouten, ontbrekende haakjes of dubbele punten.' },
   InputNietBeschikbaar: { titel: 'input() werkt hier niet', rules: [], fallback: 'je gebruikt `input()`, maar in de simulator kun je geen tekst intypen terwijl je programma draait. Zet de waarde die je wilt gebruiken direct in je code, bijvoorbeeld `naam = "Sam"`.' },
+  GPIOPinInUse: {
+    titel: 'Pin al in gebruik',
+    rules: [[/pin (GPIO\d+) is already in use/, (m, at) => at(`je gebruikt ${m[1]} voor twee dingen tegelijk. Maak per pin maar één onderdeel in je code, of roep \`.close()\` aan voordat je de pin opnieuw gebruikt.`)]],
+    fallback: 'je gebruikt dezelfde pin voor twee dingen tegelijk. Roep `.close()` aan voordat je de pin opnieuw gebruikt.',
+  },
+  GPIODeviceError: { titel: 'Pin ontbreekt', rules: [], fallback: 'je hebt niet gezegd op welke pin het onderdeel zit. Schrijf bijvoorbeeld `LED(17)` of `Button(27)`.' },
+  DeviceClosed: { titel: 'Onderdeel is gesloten', rules: [], fallback: 'je gebruikt een onderdeel nadat je `.close()` hebt aangeroepen. Maak het onderdeel opnieuw aan of haal `.close()` weg.' },
   TypeError: { titel: 'Verkeerd soort waarde', rules: typeRules, fallback: 'je gebruikt een waarde van het verkeerde soort.' },
 }
 
 export function explainError(e: PythonErrorInfo): ErrorExplanation {
   const technisch = e.traceback.trim() || `${e.type}: ${e.message}`
-  const at = (s: string) => (e.line === null ? s.charAt(0).toUpperCase() + s.slice(1) : `Regel ${e.line}: ${s}`)
+  const line = e.line ?? null // Python None komt als undefined uit de worker
+  const at = (s: string) => (line === null ? s.charAt(0).toUpperCase() + s.slice(1) : `Regel ${line}: ${s}`)
   const group = GROUPS[e.type]
   if (!group) {
     return {
       titel: 'Er ging iets mis',
-      uitleg: e.line === null
+      uitleg: line === null
         ? 'Er ging iets mis tijdens het uitvoeren van je programma. Open de technische melding voor details.'
-        : `Regel ${e.line}: er ging iets mis tijdens het uitvoeren van je programma. Open de technische melding voor details.`,
-      regel: e.line,
+        : `Regel ${line}: er ging iets mis tijdens het uitvoeren van je programma. Open de technische melding voor details.`,
+      regel: line,
       technisch,
     }
   }
   for (const [re, make] of group.rules) {
     const m = re.exec(e.message)
-    if (m) return { titel: group.titel, uitleg: make(m, at), regel: e.line, technisch }
+    if (m) return { titel: group.titel, uitleg: make(m, at), regel: line, technisch }
   }
-  return { titel: group.titel, uitleg: at(group.fallback), regel: e.line, technisch }
+  return { titel: group.titel, uitleg: at(group.fallback), regel: line, technisch }
 }
 
 export interface PinWarning { code: 'pin-unconnected' | 'pin-wrong-kind'; pin: string; device: string; found?: string }
@@ -86,6 +94,9 @@ export function explainPinWarning(w: PinWarning): PinIssue {
   let message: string
   if (w.code === 'pin-unconnected') {
     const phys = isChannel ? null : pinByGpio(Number(w.pin))?.physical
+    if (!isChannel && phys === undefined) {
+      return { id: `${w.code}:${w.pin}`, pin: w.pin, message: `Je code gebruikt ${where}, maar die pin is gereserveerd voor uitbreidingskaarten (HAT) en kan niet op de werkbank worden gekozen. Gebruik een andere pin, bijvoorbeeld GPIO17.` }
+    }
     const hint = isChannel ? 'Sleep een sensor of potmeter naar de werkbank en kies dit kanaal.' : `Sleep een ${device} naar de werkbank en verbind hem met pin ${phys ?? '?'} (${where}).`
     message = `Je code gebruikt ${where} voor een ${device}, maar daar zit niets op je werkbank. ${hint}`
   } else {

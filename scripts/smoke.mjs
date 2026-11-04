@@ -92,6 +92,18 @@ try {
   check('Stop werkt snel na een print()-lus', Date.now() - tFlood < 12000, `${Date.now() - tFlood} ms`)
   check('console toont hooguit 500 regels', (await page.locator('.font-mono > div').count()) <= 502)
 
+  // Toetsenbord: een onderdeel toevoegen zonder slepen.
+  await openExample('Knipperende led')
+  const before = await page.locator('[data-part-id]').count()
+  await page.locator('[draggable="true"][aria-label^="Buzzer "]').focus(); await page.keyboard.press('Enter')
+  check('onderdeel toevoegen met het toetsenbord (Enter)', (await page.locator('[data-part-id]').count()) === before + 1)
+
+  // Halve regel (print zonder newline) komt toch in de console.
+  await typeCode(['print("zonder newline", end="")'])
+  await startBtn().click()
+  await page.getByText('zonder newline', { exact: true }).waitFor({ timeout: 10000 }).then(() => check('print(..., end="") verschijnt in de console', true)).catch(() => check('print(..., end="") verschijnt in de console', false))
+  await ready()
+
   // De drie voorbeelden.
   for (const titel of ['Knipperende led', 'Knop schakelt led', 'Temperatuuralarm']) {
     await openExample(titel); await startBtn().click(); await page.waitForTimeout(2500)
@@ -116,6 +128,10 @@ try {
   check('technische melding is ingeklapt', !(await page.locator('details').first().evaluate((d) => d.open)))
   check('app vraagt bevestiging voordat niet-opgeslagen werk wordt vervangen', dialogs.some((m) => m.includes('nog niet hebt opgeslagen')))
   check('geen onverwachte pagina-fouten', pageErrors.length === 0, pageErrors.join(' | '))
+  // Als los bestand geopend: een Nederlandse uitleg in plaats van een lege pagina.
+  const filePage = await browser.newPage()
+  await filePage.goto(`file://${process.cwd()}/dist/index.html`)
+  check('file:// toont een uitleg in plaats van een lege pagina', (await filePage.locator('#root').innerText()).includes('niet als los bestand'))
 } catch (e) {
   check('rooktest zonder uitzondering', false, String(e?.message ?? e).split('\n')[0])
 } finally {

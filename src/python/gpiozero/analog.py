@@ -1,7 +1,7 @@
 import _hw
 
 from .devices import kind_of, warn
-from .exc import SPIBadChannel
+from .exc import DeviceClosed, SPIBadChannel
 
 
 class MCP3008:
@@ -24,6 +24,8 @@ class MCP3008:
 
     @property
     def raw_value(self):
+        if self._closed:
+            raise DeviceClosed("MCP3008 is closed or uninitialized")
         return int(_hw.readAdc(self._channel))
 
     @property

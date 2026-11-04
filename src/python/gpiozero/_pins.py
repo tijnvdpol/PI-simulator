@@ -23,6 +23,8 @@ def parse_pin(spec):
         raise invalid
     if isinstance(spec, str):
         text = spec.strip().upper()
+        if text.startswith("J8:"):
+            text = "BOARD" + text[3:]
         if text.startswith("BOARD"):
             number = text[5:]
             if number.isdigit() and int(number) in BOARD_TO_GPIO:
@@ -30,6 +32,8 @@ def parse_pin(spec):
             raise PinInvalidPin("%r is not a GPIO pin on the 40-pin header" % (spec,))
         if text.startswith("GPIO"):
             text = text[4:]
+        elif text.startswith("BCM"):
+            text = text[3:]
         if text.isdigit() and int(text) <= GPIO_MAX:
             return int(text)
     raise invalid

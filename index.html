@@ -7,6 +7,14 @@
   </head>
   <body>
     <div id="root"></div>
+    <noscript>De Pi-simulator heeft JavaScript nodig. Zet JavaScript aan in je browser om verder te gaan.</noscript>
+    <script>
+      // Als los bestand (file://) wordt de app door de browser geblokkeerd; leg dan uit wat er aan de hand is.
+      if (location.protocol === 'file:') {
+        document.getElementById('root').textContent =
+          'Deze pagina kan hier niet draaien. Open de Pi-simulator via de website (of met "npm run dev"), niet als los bestand.'
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
