@@ -7,6 +7,7 @@ export const PALETTE_TOKENS = [
   'metal', 'metal-dark', 'ink',
   'led-red', 'led-green', 'led-yellow', 'led-blue', 'led-white',
   'wire-red', 'wire-black', 'wire-blue', 'wire-green', 'wire-yellow', 'wire-orange', 'wire-purple',
+  'mat', 'mat-line', 'wood', 'wall', 'pegboard', 'peg-hole', 'tool-red', 'tool-yellow', 'lamp', 'lamp-glow', 'bin',
   'bb', 'bb-hole', 'resistor', 'smoke',
   'band-black', 'band-brown', 'band-red', 'band-orange', 'band-yellow', 'band-green', 'band-blue', 'band-violet', 'band-grey', 'band-white', 'band-gold',
 ] as const

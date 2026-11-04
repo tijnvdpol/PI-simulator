@@ -1,7 +1,9 @@
 import { useThree, type ThreeEvent } from '@react-three/fiber'
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { RoundedBox } from '@react-three/drei'
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { Object3D, type InstancedMesh } from 'three'
 import { allHoles, allRailHoles, internalGroup, parseTerminal } from '../../circuit/breadboard'
+import { breadboardTextures } from '../env/breadboardTexture'
 import { usePalette } from '../palette'
 import { BB_CENTER, BB_SIZE, BB_TOP, P, holeXZ, railXZ } from './layout'
 
@@ -33,12 +35,22 @@ export interface BreadboardProps {
   onPointerMove?: (e: ThreeEvent<PointerEvent>) => void
 }
 
-/** Het breadboard: een bord met 300 gaatjes in rijen van 5 en vier stroomrails. De gaatjes zijn één InstancedMesh. */
+const noRaycast = () => null
+
+/**
+ * Het breadboard (half formaat, 30 kolommen): afgerond, gebroken wit mat kunststof. De bovenkant is een afbeelding met echt
+ * verzonken gaatjes (kleur + hoogtekaart), letters a–j, kolomnummers en rode/blauwe lijnen bij de rails.
+ * Over de 400 aansluitpunten liggen twee InstancedMeshes: een onzichtbare om op te hoveren en klikken (`holes`) en een die
+ * alleen de gemarkeerde gaatjes laat oplichten (`hole-marks`).
+ */
 export function Breadboard({ marks, onHover, onClick, onPointerMove }: BreadboardProps) {
   const p = usePalette()
   const invalidate = useThree((s) => s.invalidate)
   const holes = useRef<InstancedMesh>(null)
-  const colors = useMemo(() => ({ base: p['bb-hole'], hover: p.accent, pending: p.gold, ok: p.accent, bad: p.danger, used: p['metal-dark'] }), [p])
+  const lit = useRef<InstancedMesh>(null)
+  const colors = useMemo(() => ({ hover: p.accent, pending: p.gold, ok: p.accent, bad: p.danger }), [p])
+  const tex = useMemo(() => breadboardTextures({ body: p.bb, hole: p['bb-hole'], ink: p['metal-dark'], plus: p['wire-red'], minus: p['wire-blue'] }), [p])
+  useEffect(() => () => { tex?.map.dispose(); tex?.bump.dispose() }, [tex])
 
   useLayoutEffect(() => {
     const m = holes.current
@@ -54,35 +66,38 @@ export function Breadboard({ marks, onHover, onClick, onPointerMove }: Breadboar
     m.computeBoundingSphere()
   }, [])
 
+  // Alleen gemarkeerde gaatjes worden getekend (een gebruikt gaatje zit al vol met een pootje of draad).
   useLayoutEffect(() => {
-    const m = holes.current
+    const m = lit.current
     if (!m) return
-    BOARD_TERMINALS.forEach((id, i) => m.setColorAt(i, colors[marks.get(id) ?? 'base']))
+    const o = new Object3D()
+    let n = 0
+    for (const [id, mark] of marks) {
+      const i = INDEX.get(id)
+      if (i === undefined || mark === 'used') continue
+      const { x, z } = terminalXZ(id)
+      o.position.set(x - BB_CENTER.x, BB_TOP + 0.08, z - BB_CENTER.z)
+      o.rotation.set(-Math.PI / 2, 0, 0)
+      o.updateMatrix()
+      m.setMatrixAt(n, o.matrix)
+      m.setColorAt(n, colors[mark])
+      n++
+    }
+    m.count = n
+    m.instanceMatrix.needsUpdate = true
     if (m.instanceColor) m.instanceColor.needsUpdate = true
     invalidate()
   }, [marks, colors, invalidate])
 
-  const stripe = (z: number, color: 'wire-red' | 'wire-blue') => (
-    <mesh position={[0, BB_TOP + 0.05, z]}>
-      <boxGeometry args={[BB_SIZE.w - 8, 0.1, 0.35]} />
-      <meshStandardMaterial color={p[color]} roughness={0.6} />
-    </mesh>
-  )
   return (
     <group name="breadboard" position={[BB_CENTER.x, 0, BB_CENTER.z]}>
-      <mesh position={[0, BB_TOP / 2, 0]} castShadow receiveShadow onPointerMove={onPointerMove}>
-        <boxGeometry args={[BB_SIZE.w, BB_TOP, BB_SIZE.d]} />
-        <meshStandardMaterial color={p.bb} roughness={0.6} />
+      <RoundedBox args={[BB_SIZE.w, BB_TOP, BB_SIZE.d]} radius={1} smoothness={3} position={[0, BB_TOP / 2, 0]} castShadow receiveShadow onPointerMove={onPointerMove}>
+        <meshStandardMaterial color={p.bb} roughness={0.72} />
+      </RoundedBox>
+      <mesh name="bb-top" rotation={[-Math.PI / 2, 0, 0]} position={[0, BB_TOP + 0.02, 0]} receiveShadow onPointerMove={onPointerMove}>
+        <planeGeometry args={[BB_SIZE.w - 0.4, BB_SIZE.d - 0.4]} />
+        <meshStandardMaterial color={tex ? undefined : p.bb} map={tex?.map} bumpMap={tex?.bump} bumpScale={tex ? 2.2 : 0} roughness={0.7} />
       </mesh>
-      {/* groef in het midden, onder de rijen e en f */}
-      <mesh position={[0, BB_TOP + 0.02, 0]}>
-        <boxGeometry args={[BB_SIZE.w - 4, 0.1, 2.6]} />
-        <meshStandardMaterial color={p['bb-hole']} roughness={0.8} />
-      </mesh>
-      {stripe(-26.3, 'wire-red')}
-      {stripe(-20.3, 'wire-blue')}
-      {stripe(20.3, 'wire-blue')}
-      {stripe(26.3, 'wire-red')}
       <instancedMesh
         ref={holes}
         args={[undefined, undefined, BOARD_TERMINALS.length]}
@@ -100,7 +115,11 @@ export function Breadboard({ marks, onHover, onClick, onPointerMove }: Breadboar
         }}
       >
         <boxGeometry args={[P * 0.62, 0.3, P * 0.62]} />
-        <meshStandardMaterial roughness={0.7} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </instancedMesh>
+      <instancedMesh ref={lit} args={[undefined, undefined, BOARD_TERMINALS.length]} name="hole-marks" raycast={noRaycast} frustumCulled={false}>
+        <planeGeometry args={[1.9, 1.9]} />
+        <meshBasicMaterial transparent opacity={0.9} depthWrite={false} toneMapped={false} />
       </instancedMesh>
     </group>
   )

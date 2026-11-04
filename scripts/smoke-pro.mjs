@@ -19,6 +19,8 @@ const GL_ARGS = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-s
 const SHOTS = process.env.SMOKE_SHOTS
 const browser = await chromium.launch({ args: GL_ARGS })
 const page = await browser.newPage({ viewport: { width: 1440, height: 860 } })
+// Software-WebGL (SwiftShader) is te traag voor de zware nabewerking; de rooktest test gedrag, dus start in de stand Laag.
+await page.addInitScript(() => { try { localStorage.setItem('pisim.quality', 'low') } catch { /* geen opslag */ } })
 const shot = (name) => SHOTS ? page.screenshot({ path: `${SHOTS}/${name}.png` }) : Promise.resolve()
 const pageErrors = []
 page.on('pageerror', (e) => pageErrors.push(e.message))
@@ -90,6 +92,17 @@ try {
   await startBtn().click()
   check('met een weerstand brandt de led', await waitStatus('p2', 'on'))
   await shot('pro-led-aan')
+
+  const tri = await page.evaluate(() => window.__pisimTriangles())
+  check('pro-scène blijft ruim onder 200.000 driehoeken', tri < 200000, `${tri} driehoeken (basis, zonder extra schaduw-/nabewerkingsrondes)`)
+
+  // Het paneel "Onderdelen" is inklapbaar, zodat het de werkbank niet afdekt.
+  const toggle = page.getByRole('button', { name: /^Onderdelen/ })
+  const partList = page.locator('ul[aria-label="Onderdelen op het breadboard"]')
+  await toggle.click()
+  check('paneel Onderdelen klapt in', !(await partList.isVisible()) && (await toggle.getAttribute('aria-expanded')) === 'false')
+  await toggle.click()
+  check('paneel Onderdelen klapt weer uit', (await partList.isVisible()) && (await toggle.getAttribute('aria-expanded')) === 'true')
 
   // Undo/redo.
   await stopBtn().click(); await ready()

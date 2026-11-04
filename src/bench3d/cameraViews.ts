@@ -21,7 +21,7 @@ export const VIEWS: Record<ViewName, CameraView> = {
   top: { position: [0, 125, 0.01], target: [0, 0, 0] },
   oblique: { position: [-55, 65, 60], target: [0, 0, 0] },
   pins: { position: [headerX, 38, headerZ + 32], target: [headerX, 3, headerZ] },
-  reset: { position: [0, 80, 85], target: [0, 0, 0] },
+  reset: { position: [0, 120, 150], target: [0, 0, 12] },
 }
 
 /** Grenzen: niet onder de tafel kijken, niet te ver weg of er te dichtbij in, niet van de tafel af schuiven. */

@@ -20,6 +20,9 @@ import type { ClientToTable } from './TableProbe'
 import { worldToSvg } from './geometry'
 import { partWorld } from './wireGeometry'
 import { Scene } from './Scene'
+import { Effects } from './env/Effects'
+import { sceneTriangles } from './sceneStats'
+import { Workshop } from './env/Workshop'
 
 /** Met `?debug` achter de url komt de renderer als `window.__pisimGl` beschikbaar (rooktest: aantal getekende frames). */
 const DEBUG = import.meta.env.DEV || new URLSearchParams(location.search).has('debug')
@@ -139,8 +142,10 @@ export default function Bench3D({ parts, connecting, error, locked, dispatch, is
         shadows
         dpr={[1, 2]}
         camera={{ position: [...VIEWS.reset.position], fov: 40, near: 1, far: 600 }}
-        onCreated={({ gl }) => { if (DEBUG) (window as unknown as { __pisimGl?: unknown }).__pisimGl = gl }}
+        onCreated={({ gl, scene }) => { if (DEBUG) { const w = window as unknown as { __pisimGl?: unknown; __pisimTriangles?: () => number }; w.__pisimGl = gl; w.__pisimTriangles = () => sceneTriangles(scene) } }}
       >
+        <Workshop center={[0, 0]} />
+        <Effects focus={[0, 0, 0]} />
         <Scene
           parts={parts}
           live={(p) => live?.(p) ?? {}}

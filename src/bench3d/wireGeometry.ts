@@ -39,20 +39,20 @@ export function wireEnds(w: Wire, parts: Part[]): WireEnds | null {
 }
 
 /**
- * Vloeiende boog tussen twee punten: de draad gaat eerst omhoog, over de top en dan omlaag naar het eindpunt.
- * `lane` (0, 1, 2, …) tilt de boog iets hoger, zodat draden naast elkaar niet door elkaar heen lopen.
+ * Lage, natuurlijke doorhang tussen twee punten: de draad gaat eerst een stukje omhoog, loopt dan in een lage boog en komt
+ * weer omlaag naar het eindpunt. `lane` (0, 1, 2, …) tilt de boog iets hoger, zodat draden naast elkaar niet door elkaar heen lopen.
  */
 export function wireCurve({ a, b }: WireEnds, lane = 0): CatmullRomCurve3 {
   const dist = Math.hypot(b[0] - a[0], b[2] - a[2])
-  const top = Math.max(a[1], b[1]) + Math.min(28, 6 + 0.3 * dist) + (lane % 4) * 1.6
+  const top = Math.max(a[1], b[1]) + Math.min(11, 5.2 + 0.06 * dist) + (lane % 4) * 1.1
   const A = new Vector3(...a)
   const B = new Vector3(...b)
   return new CatmullRomCurve3(
     [
       A,
-      new Vector3(a[0], a[1] + 3, a[2]),
+      new Vector3(a[0], a[1] + 2.5, a[2]),
       new Vector3((a[0] + b[0]) / 2, top, (a[2] + b[2]) / 2),
-      new Vector3(b[0], b[1] + 3, b[2]),
+      new Vector3(b[0], b[1] + 2.5, b[2]),
       B,
     ],
     false,

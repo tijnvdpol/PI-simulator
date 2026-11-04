@@ -66,22 +66,9 @@ export function Scene(props: SceneProps) {
   return (
     <>
       <color attach="background" args={[p.ink]} />
-      {/* zachte belichting: één hoofdlicht (met schaduw) en omgevingslicht */}
-      <ambientLight intensity={0.65} />
-      <directionalLight
-        position={[35, 75, 45]}
-        intensity={1.7}
-        castShadow
-        shadow-mapSize={[1024, 1024]}
-        shadow-camera-left={-70}
-        shadow-camera-right={70}
-        shadow-camera-top={70}
-        shadow-camera-bottom={-70}
-        shadow-camera-near={10}
-        shadow-camera-far={200}
-        shadow-bias={-0.0006}
-        shadow-radius={4}
-      />
+      {/* de werklamp met de schaduwen staat in `Workshop`; hier alleen een zacht vullicht */}
+      <ambientLight intensity={0.12} />
+      <directionalLight position={[35, 75, 45]} intensity={0.35} />
       <Table onPointerMove={props.onTablePointerMove} onClick={props.onTableClick} />
       <PiBoardModel selectable={selectablePins} issuePins={issuePins} onPinClick={onPinClick} onHover={props.onPinHover} />
       {hasAnalog && (

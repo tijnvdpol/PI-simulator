@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PINS } from '../../pinout/pinout'
-import { BB_TOP, P, anchorForPoint, holeXZ, partCenter, railXZ, terminalWorld } from './layout'
+import { BB_CENTER, BB_TOP, P, anchorForPoint, holeXZ, partCenter, railXZ, terminalWorld } from './layout'
 
 describe('breadboard-indeling', () => {
   it('gaatjes staan 2,54 mm uit elkaar; de middenspleet is 7,62 mm', () => {
@@ -9,14 +9,14 @@ describe('breadboard-indeling', () => {
     expect(holeXZ(5, 5).z - holeXZ(5, 4).z).toBeCloseTo(7.62)
   })
   it('het bord is symmetrisch om zijn midden', () => {
-    expect(holeXZ(1, 0).x).toBeCloseTo(-holeXZ(30, 0).x)
-    expect(holeXZ(1, 0).z).toBeCloseTo(-50 - (holeXZ(1, 9).z + 50))
+    expect(holeXZ(1, 0).x - BB_CENTER.x).toBeCloseTo(-(holeXZ(30, 0).x - BB_CENTER.x))
+    expect(holeXZ(1, 0).z - BB_CENTER.z).toBeCloseTo(-(holeXZ(1, 9).z - BB_CENTER.z))
   })
   it('rails staan buiten de gaatjes en hebben ruimte tussen de groepen van 5', () => {
     expect(railXZ('t+', 1).z).toBeLessThan(holeXZ(1, 0).z)
     expect(railXZ('b+', 1).z).toBeGreaterThan(holeXZ(1, 9).z)
     expect(railXZ('t+', 6).x - railXZ('t+', 5).x).toBeCloseTo(2 * P)
-    expect(railXZ('t+', 25).x).toBeCloseTo(-railXZ('t+', 1).x)
+    expect(railXZ('t+', 25).x - BB_CENTER.x).toBeCloseTo(-(railXZ('t+', 1).x - BB_CENTER.x))
   })
   it('terminalWorld geeft een plek voor alle soorten aansluitpunten', () => {
     expect(terminalWorld('h:a1')!.y).toBe(BB_TOP)

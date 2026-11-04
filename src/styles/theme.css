@@ -53,6 +53,19 @@
   --color-band-gold: #c9a227;
   --color-smoke: #8d9097;
 
+  /* Werkbank-omgeving: snijmat, hout, muur, pegboard en gereedschap */
+  --color-mat: #2a5f7a;
+  --color-mat-line: #b9d4e2;
+  --color-wood: #a9794c;
+  --color-wall: #7d838c;
+  --color-pegboard: #b8a07a;
+  --color-peg-hole: #3a2f20;
+  --color-tool-red: #c4382c;
+  --color-tool-yellow: #e3b52e;
+  --color-lamp: #2e3036;
+  --color-lamp-glow: #ffe2b0;
+  --color-bin: #4b6a8f;
+
   --radius-ui: 8px;
   --dur: 180ms;
 }

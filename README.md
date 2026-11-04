@@ -62,6 +62,18 @@ leest dezelfde onderdelen, pin-opstelling en live-waarden als de 2D-versie deed.
 - **Labels en schuifjes** zijn gewone HTML die per frame op hun 3D-plek wordt gezet (`OverlayProjector`), geen drei-`Html`.
 - `?debug` achter de url maakt de renderer beschikbaar als `window.__pisimGl` (aantal frames, tekenaanroepen); de rooktest gebruikt dat.
 
+## Werkplaats-omgeving en weergave
+
+De werkbank staat in een echte elektronica-werkplaats (`src/bench3d/env`). Het datamodel, de pin-/gaatjeslogica en de schakelingsanalyse zijn daarvoor niet veranderd: alleen de weergave.
+
+- **Omgeving** (`env/Workshop.tsx`): houten werkbankblad (PBR-textuur) met een blauwe snijmat (raster per mm, cm en 5 cm), een muur met pegboard, tang, schaar, draadrol, soldeerbout in houder, een bakje met onderdelen en een werklamp. De HDRI en de houttextuur laden ná de eerste weergave (`Suspense`), zodat de werkbank direct bruikbaar is. Bronnen en licenties: zie `ASSETS.md`.
+- **Licht en rendering** (`env/Effects.tsx`): ACES-tonemapping, HDRI voor reflecties, één warme spot (de werklamp) met zachte schaduwen, contactschaduwen, SSAO, bloom die alleen op brandende leds reageert (alleen hun emissive ligt boven de drempel), lichte scherptediepte en MSAA.
+- **Kwaliteit Hoog/Laag**: knop "Kwaliteit" bij de camerastanden (wordt onthouden). Laag = geen SSAO, scherptediepte, bloom of zachte schaduwen, kleinere schaduwkaart. Zakt de beeldsnelheid onder ~33 fps (alleen gemeten bij doorlopende animatie, omdat de werkbank op aanvraag tekent), dan schakelt hij vanzelf naar Laag. De rooktests starten in Laag, want SwiftShader is te traag voor de nabewerking.
+- **Opstelling**: in de pro-modus liggen breadboard (30 kolommen, half formaat, 82 × 58 mm), Pi (85 × 56 mm, op vier rubber voetjes van 3 mm) en de MCP3008-module naast elkaar op de mat (`pro/layout.ts`).
+- **Modellen** (`models/bodies.tsx`, `models/shapes.ts`): de lichamen van led, weerstand, knop, buzzer, temperatuursensor en potmeter worden door de simpele en de pro-werkbank gedeeld. De printplaat heeft een zelf gegenereerde canvas-textuur (koper, soldeerpunten, silkscreen; zonder logo of merknaam, `env/pcbTexture.ts`), het breadboard een kleurtextuur en een hoogtekaart voor echt verzonken gaatjes plus letters a–j en kolomnummers (`env/breadboardTexture.ts`). Draden hebben Dupont-stekkers en een lage doorhang.
+- **Showroom**: `/showroom` toont elk onderdeel los en langzaam draaiend in dezelfde omgeving, met schakelaars voor aan/uit, ingedrukt, ledkleur en weerstandswaarde.
+- **Prestaties**: de basisscène blijft ruim onder 200.000 driehoeken (de rooktest meet dat met `window.__pisimTriangles()` bij `?debug`); gaatjes en pinnen zijn InstancedMeshes.
+
 ## Pro-modus
 
 De pro-modus bouwt een echte schakeling. **Alleen de werkbank bepaalt of een stroomkring klopt**; de Python-kant (Pyodide, nep-gpiozero) is

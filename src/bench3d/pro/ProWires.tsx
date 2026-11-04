@@ -1,8 +1,10 @@
 import { useEffect, useMemo } from 'react'
 import { Mesh, type Intersection, type Raycaster } from 'three'
 import type { ProWire } from '../../circuit/types'
+import { parseTerminal } from '../../circuit/breadboard'
+import { Dupont, dupontTop } from '../Dupont'
 import { usePalette } from '../palette'
-import { WIRE_RADIUS, wireGeometry, type WireEnds } from '../wireGeometry'
+import { wireGeometry, type WireEnds } from '../wireGeometry'
 import { terminalWorld } from './layout'
 
 /** Binnen zoveel mm van een uiteinde laat een draad klikken door naar de pin of het gaatje eronder. */
@@ -29,25 +31,30 @@ export function endsOf(a: string, b: string): WireEnds | null {
   return ta && tb ? { a: v(ta), b: v(tb) } : null
 }
 
-function Tube({ wire, ends, lane, selected, ghost, onSelect }: {
-  wire: Pick<ProWire, 'id' | 'color'>; ends: WireEnds; lane: number; selected?: boolean; ghost?: boolean; onSelect?: (id: string) => void
+/** Een draad eindigt met een bus op een pin van de Pi, en met een stekkertje in een gaatje van het breadboard of de module. */
+const isFemale = (id: string) => parseTerminal(id)?.type === 'pin'
+
+function Tube({ wire, ends, ids, lane, selected, ghost, onSelect }: {
+  wire: Pick<ProWire, 'id' | 'color'>; ends: WireEnds; ids: readonly [string, string]; lane: number; selected?: boolean; ghost?: boolean; onSelect?: (id: string) => void
 }) {
   const p = usePalette()
   const key = `${ends.a.join(',')}|${ends.b.join(',')}|${lane}`
-  const geometry = useMemo(() => wireGeometry(ends, lane), [key]) // eslint-disable-line react-hooks/exhaustive-deps
+  const female = [isFemale(ids[0]), isFemale(ids[1])] as const
+  // De draad begint boven aan de stekker, niet op het aansluitpunt zelf.
+  const raised: WireEnds = {
+    a: [ends.a[0], ends.a[1] + dupontTop(female[0]), ends.a[2]],
+    b: [ends.b[0], ends.b[1] + dupontTop(female[1]), ends.b[2]],
+  }
+  const geometry = useMemo(() => wireGeometry(raised, lane), [key]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => geometry.dispose(), [geometry])
   const raycast = useMemo(() => wireRaycast(ends), [key]) // eslint-disable-line react-hooks/exhaustive-deps
   const color = p[`wire-${wire.color}`]
-  const mat = <meshStandardMaterial color={color} roughness={0.5} transparent={ghost} opacity={ghost ? 0.55 : 1} emissive={selected ? p.accent : p.ink} emissiveIntensity={selected ? 0.55 : 0} />
+  const mat = <meshPhysicalMaterial color={color} roughness={0.38} clearcoat={0.35} clearcoatRoughness={0.4} transparent={ghost} opacity={ghost ? 0.55 : 1} emissive={selected ? p.accent : p.ink} emissiveIntensity={selected ? 0.55 : 0} />
   return (
     <group name={`wire-${wire.id}`} userData={{ color: wire.color, selected: !!selected }}>
       <mesh geometry={geometry} raycast={raycast} onClick={onSelect ? (e) => { e.stopPropagation(); onSelect(wire.id) } : undefined}>{mat}</mesh>
-      {[ends.a, ends.b].map((e, i) => (
-        <mesh key={i} position={[e[0], e[1], e[2]]}>
-          <sphereGeometry args={[WIRE_RADIUS * 1.5, 8, 6]} />
-          {mat}
-        </mesh>
-      ))}
+      <Dupont at={ends.a} female={female[0]} />
+      <Dupont at={ends.b} female={female[1]} />
     </group>
   )
 }
@@ -61,9 +68,9 @@ export function ProWires({ wires, selectedId, onSelect, preview }: {
     <group name="wires">
       {wires.map((w, i) => {
         const ends = endsOf(w.a, w.b)
-        return ends ? <Tube key={w.id} wire={w} ends={ends} lane={i} selected={w.id === selectedId} onSelect={onSelect} /> : null
+        return ends ? <Tube key={w.id} wire={w} ends={ends} ids={[w.a, w.b]} lane={i} selected={w.id === selectedId} onSelect={onSelect} /> : null
       })}
-      {pv && <Tube wire={{ id: 'preview', color: 'yellow' }} ends={pv} lane={wires.length} ghost />}
+      {pv && <Tube wire={{ id: 'preview', color: 'yellow' }} ends={pv} ids={[preview!.a, preview!.b]} lane={wires.length} ghost />}
     </group>
   )
 }
