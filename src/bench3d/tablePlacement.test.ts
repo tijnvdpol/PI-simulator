@@ -2,7 +2,7 @@ import { PerspectiveCamera, Ray, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 import { BOARD_POS } from '../bench/partGeometry'
 import { TABLE } from './geometry'
-import { ALLOWED_CELLS, MIN_SPACING, PI_ZONE, insidePiZone, ndcToTable, placeOnTable, rayToTable } from './tablePlacement'
+import { ALLOWED_CELLS, CHIP_ZONE, MIN_SPACING, PI_ZONE, forbidden, insideChipZone, insidePiZone, ndcToTable, placeOnTable, rayToTable } from './tablePlacement'
 
 describe('raster naast de Pi', () => {
   it('alle toegestane plekken liggen op het raster en niet op of vlak naast de Pi', () => {
@@ -10,8 +10,15 @@ describe('raster naast de Pi', () => {
     for (const c of ALLOWED_CELLS) {
       expect(c.x % TABLE.gridSvg).toBe(0)
       expect(c.y % TABLE.gridSvg).toBe(0)
-      expect(insidePiZone(c.x, c.y)).toBe(false)
+      expect(forbidden(c.x, c.y)).toBe(false)
     }
+  })
+
+  it('ook de chip is verboden terrein', () => {
+    expect(insideChipZone(505, 118)).toBe(true)
+    const r = placeOnTable(505, 118)
+    expect(forbidden(r.x, r.y)).toBe(false)
+    expect(CHIP_ZONE.x0).toBeLessThan(430)
   })
 
   it('de zone omvat de hele Pi', () => {
@@ -30,7 +37,7 @@ describe('raster naast de Pi', () => {
   it('een punt op de Pi wordt naar de rand ervan geduwd, nooit op de Pi gezet', () => {
     for (const [x, y] of [[450, 450], [200, 300], [700, 260], [BOARD_POS.x + 5, BOARD_POS.y + 5]]) {
       const r = placeOnTable(x, y)
-      expect(insidePiZone(r.x, r.y), `${x},${y}`).toBe(false)
+      expect(forbidden(r.x, r.y), `${x},${y}`).toBe(false)
     }
   })
 

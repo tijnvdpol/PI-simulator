@@ -1,6 +1,6 @@
 import { useMemo, type RefObject } from 'react'
 import { isAnalog } from '../bench/benchState'
-import type { PartLive } from '../bench/components/Bench'
+import type { PartLive } from '../bench/benchTypes'
 import { computeWires } from '../bench/wires'
 import type { Part } from '../project/types'
 import { CHIP_CENTER, type V3 } from './anchors'

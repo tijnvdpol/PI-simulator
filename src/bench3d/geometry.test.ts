@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { BOARD_POS } from '../bench/partGeometry'
-import { pinPosition } from '../bench/components/PiBoard'
 import { PINS } from '../pinout/pinout'
 import { HEADER, MM, PI_BOARD, PITCH, TABLE, pinBoardMm, pinWorld, snapSvg, svgToWorld, worldToSvg } from './geometry'
 
@@ -65,23 +64,13 @@ describe('pinposities in 3D', () => {
     expect(pinBoardMm(11).v).toBeCloseTo(pinBoardMm(1).v, 6)
   })
 
-  it('komt overeen met de 2D-opstelling (zelfde kolommen en rijen, schaal 8)', () => {
-    for (const p of PINS) {
-      const two = pinPosition(p.physical)
-      const three = pinBoardMm(p.physical)
-      const one = pinBoardMm(1), one2 = pinPosition(1)
-      expect((two.x - one2.x) / MM).toBeCloseTo(three.u - one.u, 6)
-      expect((two.y - one2.y) / MM).toBeCloseTo(three.v - one.v, 6)
-    }
-  })
-
   it('pinnen steken boven de printplaat uit', () => {
     for (const p of all) expect(p.y).toBeGreaterThan(PI_BOARD.thickness)
   })
 })
 
 describe('werkbankcoördinaten', () => {
-  it('de tafel is gecentreerd rond de oorsprong en de Pi staat op de plek van de 2D-opstelling', () => {
+  it('de tafel is gecentreerd rond de oorsprong en de Pi staat op de plek van BOARD_POS', () => {
     expect(svgToWorld(TABLE.svgW / 2, TABLE.svgH / 2)).toEqual({ x: 0, z: 0 })
     const corner = svgToWorld(BOARD_POS.x, BOARD_POS.y)
     expect(corner.x).toBeCloseTo(-PI_BOARD.width / 2, 6)
@@ -91,15 +80,6 @@ describe('werkbankcoördinaten', () => {
       const w = svgToWorld(x, y)
       const back = worldToSvg(w.x, w.z)
       expect(back.x).toBeCloseTo(x, 6); expect(back.y).toBeCloseTo(y, 6)
-    }
-  })
-  it('een pin ligt vrijwel op de plek van zijn 2D-tegenhanger (de 2D-tekening was een benadering, max. 3 mm)', () => {
-    for (const n of [1, 11, 40]) {
-      const two = pinPosition(n)
-      const w = svgToWorld(BOARD_POS.x + two.x, BOARD_POS.y + two.y)
-      const p = pinWorld(n)
-      expect(Math.abs(p.x - w.x)).toBeLessThan(3)
-      expect(Math.abs(p.z - w.z)).toBeLessThan(3)
     }
   })
   it('snap zet onderdelen op het raster', () => {

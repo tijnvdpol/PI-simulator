@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react'
-import type { BenchProps } from '../bench/components/Bench'
+import type { BenchProps } from '../bench/benchTypes'
 import { hasWebGL } from './webgl'
 
 let promise: Promise<typeof import('./Bench3D')> | null = null
@@ -7,6 +7,11 @@ let promise: Promise<typeof import('./Bench3D')> | null = null
 /** Start het laden van de 3D-code. Roep dit aan bij het openen van de pagina, naast het opstarten van Pyodide. */
 export function loadBench3D() {
   return (promise ??= import('./Bench3D'))
+}
+
+/** Start het laden van de 3D-code, maar alleen als de browser WebGL kan. */
+export function preloadBench3D(): Promise<unknown> | null {
+  return hasWebGL() ? loadBench3D() : null
 }
 
 const Bench3D = lazy(loadBench3D)
@@ -29,7 +34,14 @@ export function NoWebGLNotice() {
 export function LazyBench3D(props: BenchProps) {
   if (!hasWebGL()) return <div data-testid="bench" className="relative h-full w-full"><NoWebGLNotice />{props.children}</div>
   return (
-    <Suspense fallback={<div role="status" className="flex h-full items-center justify-center text-fg-muted">3D-werkbank wordt geladen…</div>}>
+    <Suspense
+      fallback={
+        <div data-testid="bench" className="relative h-full w-full">
+          <div role="status" className="flex h-full items-center justify-center text-fg-muted">3D-werkbank wordt geladen…</div>
+          {props.children}
+        </div>
+      }
+    >
       <Bench3D {...props} />
     </Suspense>
   )

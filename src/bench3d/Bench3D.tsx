@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { selectableTargets } from '../bench/benchState'
 import { defaultDropPosition } from '../bench/partGeometry'
 import { DRAG_TYPE } from '../ui/PartsTray'
-import type { BenchProps } from '../bench/components/Bench'
+import type { BenchProps } from '../bench/benchTypes'
 import { benchWarnings } from '../bench/warnings'
 import { isAnalog as analog } from '../bench/benchState'
 import { pinByGpio, pinByPhysical } from '../pinout/pinout'
@@ -20,6 +20,9 @@ import type { ClientToTable } from './TableProbe'
 import { worldToSvg } from './geometry'
 import { partWorld } from './wireGeometry'
 import { Scene } from './Scene'
+
+/** Met `?debug` achter de url komt de renderer als `window.__pisimGl` beschikbaar (rooktest: aantal getekende frames). */
+const DEBUG = import.meta.env.DEV || new URLSearchParams(location.search).has('debug')
 
 /** 3D-werkbank. Zelfde props als de 2D-werkbank; het datamodel en de staat blijven ongewijzigd. */
 export default function Bench3D({ parts, connecting, error, locked, dispatch, issues = [], live, children, onPartPress, sensors }: BenchProps) {
@@ -136,6 +139,7 @@ export default function Bench3D({ parts, connecting, error, locked, dispatch, is
         shadows
         dpr={[1, 2]}
         camera={{ position: [...VIEWS.reset.position], fov: 40, near: 1, far: 600 }}
+        onCreated={({ gl }) => { if (DEBUG) (window as unknown as { __pisimGl?: unknown }).__pisimGl = gl }}
       >
         <Scene
           parts={parts}
@@ -168,7 +172,7 @@ export default function Bench3D({ parts, connecting, error, locked, dispatch, is
       {/* labels, schuifjes en pin-tooltip: gewone HTML, door de scène op hun 3D-plek gezet */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         {parts.map((part) => (
-          <div key={part.id} ref={register(`part:${part.id}`)} className="absolute left-0 top-0" style={{ visibility: 'hidden' }}>
+          <div key={part.id} data-overlay={part.id} ref={register(`part:${part.id}`)} className="absolute left-0 top-0" style={{ visibility: 'hidden' }}>
             <PartOverlay
               part={part}
               slider={sensors && analog(part.kind) ? { value: sensors.values[part.id], onChange: (v) => sensors.onChange(part, v) } : undefined}
@@ -206,6 +210,7 @@ export default function Bench3D({ parts, connecting, error, locked, dispatch, is
       )}
       <PartList
         parts={parts}
+        live={live}
         locked={locked}
         selectedId={selected}
         onSelect={onSelect}

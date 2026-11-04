@@ -1,7 +1,7 @@
 import type { ThreeEvent } from '@react-three/fiber'
 import { useLayoutEffect, useRef } from 'react'
 import type { Group, Mesh } from 'three'
-import type { PartLive } from '../bench/components/Bench'
+import type { PartLive } from '../bench/benchTypes'
 import type { Part } from '../project/types'
 import { partWorld } from './wireGeometry'
 import { PartModel } from './models/PartModel'
