@@ -1,7 +1,7 @@
 import { ADC_CHANNELS, type HardwareState } from '../engine/hardwareState'
 import { pinByPhysical } from '../pinout/pinout'
 import type { Part, PartKind } from '../project/types'
-import type { PartLive } from './components/Bench'
+import type { PartLive } from './benchTypes'
 
 export const TEMP_MIN = -10
 export const TEMP_MAX = 50

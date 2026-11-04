@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { BuzzerSound } from '../audio/buzzer'
-import { Bench } from '../bench/components/Bench'
 import { snapshot, syncAnalog } from '../bench/liveControls'
 import { defaultDropPosition } from '../bench/partGeometry'
+import { LazyBench3D, preloadBench3D } from '../bench3d/LazyBench3D'
+import { placeOnTable } from '../bench3d/placement'
 import { useHardwareFrame } from '../bench/useHardwareFrame'
 import { checkEnvironment } from '../engine/environment'
 import { explainError, explainPinWarning, type ErrorExplanation, type PinIssue } from '../engine/explainError'
@@ -73,6 +74,8 @@ function Simulator() {
   }, [flush])
 
   useEffect(() => {
+    // De 3D-code en Pyodide laden tegelijk, niet na elkaar.
+    preloadBench3D()
     const e = new PythonEngine({
       state: hw,
       createWorker: () => new Worker(new URL('../engine/worker.ts', import.meta.url), { type: 'module' }) as unknown as WorkerLike,
@@ -172,12 +175,15 @@ function Simulator() {
         <aside aria-label="Onderdelenbak" className="overflow-y-auto border-r border-line bg-panel">
           <PartsTray
             onAdd={(kind) => {
-              if (status !== 'draait') dispatchBench({ type: 'add', kind, ...defaultDropPosition(bench.parts) })
+              if (status !== 'draait') {
+                const slot = defaultDropPosition(bench.parts)
+                dispatchBench({ type: 'add', kind, ...placeOnTable(slot.x, slot.y, bench.parts) })
+              }
             }}
           />
         </aside>
         <section aria-label="Werkbank" className="relative min-h-0 bg-bg">
-          <Bench
+          <LazyBench3D
             parts={bench.parts}
             connecting={bench.connecting}
             error={bench.error}
@@ -195,7 +201,7 @@ function Simulator() {
             sensors={{ values: sensorValues, onChange: (part, v) => setSensorValues((prev) => ({ ...prev, [part.id]: v })) }}
           >
             {bench.parts.length === 0 && <EmptyState onOpenExamples={() => setExamplesOpen(true)} />}
-          </Bench>
+          </LazyBench3D>
         </section>
         <section aria-label="Code" className="flex min-h-0 flex-col border-l border-line bg-panel">
           <RunControls status={status} onStart={start} onStop={stop} onRetry={() => engine.current?.retry()} />
