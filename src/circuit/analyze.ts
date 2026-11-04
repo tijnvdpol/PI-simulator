@@ -231,7 +231,12 @@ export function analyze(circuit: Circuit, inputs: AnalyzeInputs = {}): AnalysisR
     const duty = dutyOf.get(p.id) ?? 1
     if (p.kind === 'led') {
       const [a, k] = [nl.legNet(p, 'anode'), nl.legNet(p, 'kathode')]
-      if (inputs.burnt?.has(p.id)) { result.parts[p.id] = { status: 'burnt', mA: 0, level: 0, hint: 'Deze led is doorgebrand. Vervang hem door een nieuwe.' }; continue }
+      if (inputs.burnt?.has(p.id)) {
+        const hint = 'Deze led is doorgebrand en blijft zwart. Klik op de led en kies "Vervang led".'
+        result.parts[p.id] = { status: 'burnt', mA: 0, level: 0, hint }
+        result.issues.push({ id: `${p.id}-burnt`, severity: 'fout', partId: p.id, message: `Je led (${p.id}) is doorgebrand. ${hint}` })
+        continue
+      }
       if (mA > LED_BURN_MA) {
         burntNow.add(p.id)
         result.newlyBurnt.push(p.id)

@@ -166,7 +166,7 @@ describe('ProBench3D (HTML-kant)', () => {
     render(<W />)
     expect(screen.getByRole('list', { name: /Meldingen/ })).toHaveTextContent(/doorgebrand/)
     fireEvent.click(within(screen.getByRole('list', { name: 'Onderdelen op het breadboard' })).getByRole('button', { name: /led/ }))
-    fireEvent.click(screen.getByRole('button', { name: 'Vervang led' }))
+    fireEvent.click(within(screen.getByRole('complementary', { name: /Eigenschappen van led/ })).getByRole('button', { name: 'Vervang led' }))
     expect(seen).toContainEqual({ type: 'replace', id: 'p2' })
   })
   it('sleep vanuit de bak toont geen spook zonder gesleept onderdeel (geen crash)', () => {
@@ -174,5 +174,40 @@ describe('ProBench3D (HTML-kant)', () => {
     const target = container.querySelector('[data-testid="bench"]')!
     act(() => { fireEvent.dragOver(target, { dataTransfer: { types: [] } }) })
     expect(screen.queryByRole('alert')).toBeNull()
+  })
+})
+
+describe('draden en klikken', () => {
+  it('een klik vlak bij het uiteinde van een draad valt door naar de pin eronder', async () => {
+    const { wireRaycast, END_CLICK_THROUGH } = await import('./ProWires')
+    const { Mesh, BoxGeometry, Raycaster, Vector3, Intersection } = await import('three') as unknown as typeof import('three') & { Intersection: never }
+    void Intersection
+    const mesh = new Mesh(new BoxGeometry(100, 1, 1)) // een "draad" van x = −50 tot 50 op y = 0
+    mesh.updateMatrixWorld()
+    const ends = { a: [-50, 0, 0] as const, b: [50, 0, 0] as const }
+    const cast = (x: number) => {
+      const hits: import('three').Intersection[] = []
+      wireRaycast(ends).call(mesh, new Raycaster(new Vector3(x, 10, 0), new Vector3(0, -1, 0)), hits)
+      return hits.length
+    }
+    expect(cast(0)).toBeGreaterThan(0)
+    expect(cast(-50 + END_CLICK_THROUGH - 0.5)).toBe(0)
+    expect(cast(50 - END_CLICK_THROUGH + 0.5)).toBe(0)
+    expect(cast(-50 + END_CLICK_THROUGH + 1)).toBeGreaterThan(0)
+  })
+})
+
+describe('doorgebrande led vervangen vanuit de melding', () => {
+  it('de melding heeft een knop "Vervang led"', () => {
+    const noR: Circuit = { parts: [circuit.parts[1]], wires: [] }
+    const seen: ProAction[] = []
+    render(
+      <ProBench3D
+        circuit={noR} pending={null} error={null} wireColor="auto" canUndo={false} canRedo={false} burnt={['p2']} dispatch={(a) => seen.push(a)} locked
+        result={analyze(noR, { burnt: new Set(['p2']) })} sensors={{ values: {}, onChange: () => {} }} pressed={{}} onPress={() => {}}
+      />,
+    )
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Vervang led' }))
+    expect(seen).toContainEqual({ type: 'replace', id: 'p2' })
   })
 })

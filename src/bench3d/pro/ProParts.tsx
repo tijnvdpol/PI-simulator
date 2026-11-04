@@ -144,7 +144,16 @@ export function ProPartView({ part, live, selected, handlers }: { part: ProPart;
   const zs = legs.map((l) => l.z)
   const size = { w: Math.max(...xs) - Math.min(...xs) + 1.2, d: Math.max(...zs) - Math.min(...zs) + 1.2 }
   const legLen = (name: string) => (part.kind === 'led' ? (name === 'anode' ? 6.5 : 5.2) : part.kind === 'resistor' ? 3.6 : part.kind === 'button' ? 3 : part.kind === 'buzzer' ? 1.5 : 2)
-  const hitY = BB_TOP + 7
+  // Het klikvlak is zo groot als het huis van het onderdeel, zodat de gaatjes eromheen klikbaar blijven.
+  const body: Record<ProPart['kind'], { w: number; d: number; h: number; y: number }> = {
+    led: { w: 6, d: 6, h: 12, y: 11 },
+    resistor: { w: Math.min(6.3, span - 2) + 1, d: 3, h: 3, y: 3.6 },
+    button: { w: Math.max(6, size.w), d: Math.max(6, size.d), h: 5, y: 3.5 },
+    buzzer: { w: 12, d: 12, h: 8, y: 5.5 },
+    temperature: { w: 5, d: 5, h: 5, y: 3.2 },
+    potentiometer: { w: 10, d: 9.5, h: 7, y: 5 },
+  }
+  const hit = body[part.kind]
   return (
     <group name={`part-${part.id}`} userData={{ partId: part.id, kind: part.kind }}>
       {legs.map((l) => <Leg key={l.name} at={l} len={legLen(l.name)} />)}
@@ -164,14 +173,15 @@ export function ProPartView({ part, live, selected, handlers }: { part: ProPart;
       )}
       <mesh
         name="hit"
-        position={[c.x, hitY, c.z]}
+        position={[c.x, BB_TOP + hit.y, c.z]}
+        rotation={[0, angle, 0]}
         onPointerDown={(e) => handlers.onPointerDown?.(part, e)}
         onPointerUp={(e) => handlers.onPointerUp?.(part, e)}
         onPointerOut={(e) => handlers.onPointerOut?.(part, e)}
         onClick={(e) => handlers.onClick?.(part, e)}
         onPointerOver={(e) => { e.stopPropagation(); if (e.nativeEvent.target instanceof HTMLElement) e.nativeEvent.target.style.cursor = 'pointer' }}
       >
-        <boxGeometry args={[Math.max(9, size.w + 2, span + 2), 16, Math.max(9, size.d + 2)]} />
+        <boxGeometry args={[hit.w, hit.h, hit.d]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
     </group>

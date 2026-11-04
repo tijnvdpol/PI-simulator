@@ -10,7 +10,7 @@ export const PRO_VIEWS: Record<ViewName, CameraView> = {
   top: { position: [PRO_TABLE.cx - 12, 190, tz + 0.01], target: [PRO_TABLE.cx - 12, 0, tz] },
   oblique: { position: [-85, 100, 50], target: [PRO_TABLE.cx - 12, 0, tz - 8] },
   pins: { position: [-12, 55, -18], target: [-12, 8, -34] },
-  reset: { position: [PRO_TABLE.cx - 12, 120, tz + 85], target: [PRO_TABLE.cx - 12, 0, tz - 6] },
+  reset: { position: [PRO_TABLE.cx - 12, 150, tz + 105], target: [PRO_TABLE.cx - 12, 0, tz - 6] },
 }
 
 export const PRO_LIMITS: CameraLimits = {

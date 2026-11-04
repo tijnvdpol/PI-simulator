@@ -46,7 +46,7 @@ export function ProToolbar(p: {
   )
 }
 
-export function ProIssues({ issues }: { issues: Issue[] }) {
+export function ProIssues({ issues, onReplace }: { issues: Issue[]; onReplace?: (partId: string) => void }) {
   if (issues.length === 0) return null
   const tone = { fout: 'border-danger', waarschuwing: 'border-warning', info: 'border-line' } as const
   const icon = { fout: '⛔', waarschuwing: '⚠', info: 'ℹ' } as const
@@ -55,6 +55,9 @@ export function ProIssues({ issues }: { issues: Issue[] }) {
       {issues.map((i) => (
         <li key={i.id} role={i.severity === 'fout' ? 'alert' : 'status'} className={`rounded-ui border ${tone[i.severity]} bg-panel/95 p-3 text-sm`}>
           <span aria-hidden className="mr-1">{icon[i.severity]}</span>{i.message}
+          {i.partId && i.id.endsWith('-burnt') && onReplace && (
+            <div className="mt-2"><button type="button" className={`${btn} border-danger`} onClick={() => onReplace(i.partId!)}>Vervang led</button></div>
+          )}
         </li>
       ))}
     </ul>

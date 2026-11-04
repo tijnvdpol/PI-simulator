@@ -13,7 +13,7 @@ import type { ViewName } from '../cameraViews'
 import type { ClientToTable } from '../TableProbe'
 import { rayToTable } from '../tablePlacement'
 import { holeMarks } from './Breadboard'
-import { anchorForPoint, partCenter } from './layout'
+import { BB_TOP, anchorForPoint, partCenter } from './layout'
 import { ProIssues, ProProperties, ProToolbar, ProWireProperties } from './ProPanels'
 import type { ProLive } from './ProParts'
 import { ProScene, type BurnSpot } from './ProScene'
@@ -156,7 +156,7 @@ export default function ProBench3D(props: ProBenchProps) {
   const onPartDown = (part: ProPart, e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation()
     if (locked) { if (part.kind === 'button') props.onPress(part.id, true); return }
-    const hit = rayToTable(e.ray)
+    const hit = rayToTable(e.ray, BB_TOP)
     if (!hit) return
     const c = partCenter(part)
     rotRef.current = part.rot
@@ -222,7 +222,7 @@ export default function ProBench3D(props: ProBenchProps) {
           onTerminalHover={(id) => { setHover(id); setTip(id ? { ...mouse.current } : null) }}
           onTerminalClick={onTerminal}
           onWireSelect={(id) => { if (performance.now() - lastDragEnd.current < 80) return; setSelWire(id); setSelPart(null) }}
-          projectRef={projectRef} view={view} controlsEnabled={!dragging}
+          projectRef={projectRef} view={view} controlsEnabled={!dragging} debug={DEBUG}
           onPointerDown={onPartDown} onPointerUp={onPartUp} onPointerOut={onPartUp}
           onClick={(part, e) => { e.stopPropagation(); if (locked || performance.now() - lastDragEnd.current < 80) return; setSelPart(part.id); setSelWire(null) }}
           onTableClick={() => { dispatch({ type: 'cancelWire' }); setSelPart(null); setSelWire(null) }}
@@ -241,7 +241,10 @@ export default function ProBench3D(props: ProBenchProps) {
         canUndo={props.canUndo} canRedo={props.canRedo} onUndo={() => dispatch({ type: 'undo' })} onRedo={() => dispatch({ type: 'redo' })}
         pending={props.pending !== null} locked={locked}
       />
-      <ProIssues issues={[...(props.error ? [{ id: 'error', severity: 'waarschuwing' as const, message: props.error }] : []), ...result.issues]} />
+      <ProIssues
+        issues={[...(props.error ? [{ id: 'error', severity: 'waarschuwing' as const, message: props.error }] : []), ...result.issues]}
+        onReplace={(id) => dispatch({ type: 'replace', id })}
+      />
 
       {selectedPart && (
         <ProProperties
@@ -270,6 +273,7 @@ export default function ProBench3D(props: ProBenchProps) {
               <li key={p.id} className="flex items-center justify-between gap-2">
                 <button
                   type="button" className="rounded-ui px-2 py-1 text-left hover:bg-line focus-visible:outline-2 focus-visible:outline-accent"
+                  data-kind={p.kind} data-part-id={p.id} data-status={result.parts[p.id]?.status ?? 'ok'} data-burnt={props.burnt.includes(p.id)}
                   aria-pressed={selPart === p.id}
                   onClick={() => { if (!locked) { setSelPart(p.id); setSelWire(null) } }}
                 >

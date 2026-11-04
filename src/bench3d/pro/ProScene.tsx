@@ -1,5 +1,5 @@
-import type { ThreeEvent } from '@react-three/fiber'
-import { useMemo, type RefObject } from 'react'
+import { useThree, type ThreeEvent } from '@react-three/fiber'
+import { useEffect, useMemo, type RefObject } from 'react'
 import type { Circuit, ProPart } from '../../circuit/types'
 import { CameraRig, type ViewRequest } from '../CameraRig'
 import { PiBoardModel } from '../models/PiBoardModel'
@@ -8,11 +8,34 @@ import { Table } from '../Table'
 import { TableProbe, type ClientToTable } from '../TableProbe'
 import { Breadboard, type HoleMark } from './Breadboard'
 import { BurnEffect } from './BurnEffect'
-import { PRO_TABLE } from './layout'
+import { projectToScreen } from '../overlayProjection'
+import { BB_TOP, PRO_TABLE, terminalWorld } from './layout'
 import { McpModule } from './McpModule'
 import { ProPartView, type ProLive, type ProPartHandlers } from './ProParts'
 import { ProWires } from './ProWires'
 import { PRO_LIMITS, PRO_VIEWS } from './views'
+
+/** Alleen met `?debug`: laat de rooktest weten waar een aansluitpunt op het scherm staat. */
+function DebugProbe() {
+  const camera = useThree((st) => st.camera)
+  const size = useThree((st) => st.size)
+  const el = useThree((st) => st.gl.domElement)
+  useEffect(() => {
+    const w = window as unknown as { __pisimPro?: unknown }
+    w.__pisimPro = {
+      screenOf: (id: string) => {
+        const t = terminalWorld(id)
+        if (!t) return null
+        camera.updateMatrixWorld()
+        const pt = projectToScreen([t.x, t.y, t.z], camera, size.width, size.height)
+        const r = el.getBoundingClientRect()
+        return pt ? { x: r.left + pt.x, y: r.top + pt.y } : null
+      },
+    }
+    return () => { delete w.__pisimPro }
+  }, [camera, size, el])
+  return null
+}
 
 export interface BurnSpot { key: string; x: number; z: number }
 
@@ -32,6 +55,7 @@ export interface ProSceneProps extends ProPartHandlers {
   projectRef: RefObject<ClientToTable | null>
   view: ViewRequest | null
   controlsEnabled?: boolean
+  debug?: boolean
   onTableClick?: (e: ThreeEvent<MouseEvent>) => void
 }
 
@@ -64,8 +88,9 @@ export function ProScene(p: ProSceneProps) {
         <ProPartView key={part.id} part={part} live={p.live(part)} selected={part.id === p.selectedPartId} handlers={handlers} />
       ))}
       <ProWires wires={p.circuit.wires} selectedId={p.selectedWireId} onSelect={p.onWireSelect} preview={p.preview} />
-      {p.burns.map((b) => <BurnEffect key={b.key} x={b.x} y={9} z={b.z} onDone={() => p.onBurnDone(b.key)} />)}
-      <TableProbe apiRef={p.projectRef} />
+      {p.burns.map((b) => <BurnEffect key={b.key} x={b.x} y={BB_TOP} z={b.z} onDone={() => p.onBurnDone(b.key)} />)}
+      <TableProbe apiRef={p.projectRef} height={BB_TOP} />
+      {p.debug && <DebugProbe />}
       <CameraRig request={p.view} enabled={p.controlsEnabled ?? true} views={PRO_VIEWS} limits={PRO_LIMITS} />
     </>
   )

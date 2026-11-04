@@ -136,6 +136,7 @@ describe('geen of te lage weerstand', () => {
     expect(led(r).status).toBe('burnt')
     expect(led(r).level).toBe(0)
     expect(r.newlyBurnt).toEqual([])
+    expect(r.issues.find((i) => i.partId === 'led')?.message).toMatch(/Vervang led/)
   })
   it('een doorgebrande led geeft geen stroom meer door', () => {
     const r = analyze(ledCircuit({ ohm: 330 }), { ...out(17), burnt: new Set(['led']) })

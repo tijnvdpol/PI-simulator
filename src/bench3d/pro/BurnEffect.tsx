@@ -27,9 +27,9 @@ export function BurnEffect({ x, y, z, onDone }: { x: number; y: number; z: numbe
       const delay = k * 0.12
       const a = Math.max(0, (age - delay) / (BURN_SECONDS - delay))
       puff.visible = a > 0 && a < 1
-      puff.position.set(Math.sin(k * 2.1) * 1.2 * a, 3 + a * 14, Math.cos(k * 1.7) * 1.2 * a)
-      puff.scale.setScalar(0.8 + a * 3.2)
-      ;(puff.material as MeshStandardMaterial).opacity = 0.55 * (1 - a)
+      puff.position.set(Math.sin(k * 2.1) * 2.5 * a, 17 + a * 22, Math.cos(k * 1.7) * 2.5 * a)
+      puff.scale.setScalar(1.4 + a * 3.6)
+      ;(puff.material as MeshStandardMaterial).opacity = 0.7 * (1 - a * a)
     })
     if (age >= BURN_SECONDS) { done.current = true; onDone?.() }
     invalidate()
@@ -37,7 +37,7 @@ export function BurnEffect({ x, y, z, onDone }: { x: number; y: number; z: numbe
 
   return (
     <group ref={group} name="burn-effect" position={[x, y, z]}>
-      <pointLight ref={light} color={p.danger} intensity={900} distance={50} decay={2} position={[0, 6, 0]} />
+      <pointLight ref={light} color={p.danger} intensity={900} distance={50} decay={2} position={[0, 12, 0]} />
       {Array.from({ length: PUFFS }, (_, i) => (
         <mesh key={i} visible={false}>
           <sphereGeometry args={[1, 10, 8]} />
