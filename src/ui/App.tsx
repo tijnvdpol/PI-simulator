@@ -18,8 +18,11 @@ import { ExamplesMenu } from './ExamplesMenu'
 import { ErrorCard } from './ErrorCard'
 import { PartsTray } from './PartsTray'
 import { RunControls } from './RunControls'
+import { ShareDialog } from './ShareDialog'
+import { ToastHost, useToasts } from './Toast'
 import { TopBar } from './TopBar'
 import { useProject } from './useProject'
+import { resolveInitial, useProjectIO } from './useProjectIO'
 
 export function App() {
   const env = checkEnvironment()
@@ -37,7 +40,10 @@ export function App() {
 }
 
 function Simulator() {
-  const { bench, code, setCode, dispatchBench, load } = useProject()
+  const initial = useMemo(() => resolveInitial(location.hash), [])
+  const { project, bench, code, setCode, dispatchBench, load } = useProject(initial.project ?? undefined)
+  const { toasts, show } = useToasts()
+  const fileInput = useRef<HTMLInputElement>(null)
   const [examplesOpen, setExamplesOpen] = useState(false)
   const hw = useMemo(() => new HardwareState(), [])
   const sound = useMemo(() => new BuzzerSound(), [])
@@ -107,6 +113,13 @@ function Simulator() {
     dispatchConsole({ type: 'sys', text: 'Gestopt.' })
   }
 
+  // Een geladen deellink wordt uit de adresbalk gehaald, zodat een refresh je eigen werk niet overschrijft.
+  const reported = useRef(false)
+  useEffect(() => {
+    if (initial.error && !reported.current) { reported.current = true; show(initial.error, 'fout') }
+    if (/^#?p=/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search)
+  }, [initial, show])
+
   const openProject = (p: Project) => {
     if (status === 'draait') engine.current?.stop()
     pending.current = []
@@ -117,9 +130,32 @@ function Simulator() {
     load(p)
   }
 
+  const io = useProjectIO({ project, openProject, toast: show })
+
   return (
     <div className="flex h-full min-w-[1100px] flex-col">
-      <TopBar onExamples={() => setExamplesOpen(true)} />
+      <TopBar
+        onExamples={() => setExamplesOpen(true)}
+        onSave={io.save}
+        onDownload={io.download}
+        onOpenLast={io.openLast}
+        onPickFile={() => fileInput.current?.click()}
+        onShare={() => void io.share()}
+      />
+      <input
+        ref={fileInput}
+        type="file"
+        accept=".json,application/json"
+        hidden
+        data-testid="project-file"
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          if (f) void io.importFile(f)
+          e.target.value = ''
+        }}
+      />
+      <ToastHost toasts={toasts} />
+      {io.sharedUrl && <ShareDialog url={io.sharedUrl} onClose={io.closeShared} />}
       <ExamplesMenu open={examplesOpen} onClose={() => setExamplesOpen(false)} onPick={openProject} />
       <main className="grid min-h-0 flex-1 grid-cols-[16rem_1fr_28rem]">
         <aside aria-label="Onderdelenbak" className="overflow-y-auto border-r border-line bg-panel">
