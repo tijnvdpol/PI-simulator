@@ -9,6 +9,8 @@ class OutputDevice(Device):
 
     def __init__(self, pin=None, *, active_high=True, initial_value=False, pin_factory=None):
         super().__init__(pin)
+        if self._pin is not None:
+            _hw.setMode(self._pin, "out")
         self._active_high = active_high
         self._value = False
         self._blink_timer = None
