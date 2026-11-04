@@ -12,7 +12,7 @@ function WireTube({ wire, ends, lane }: { wire: Wire; ends: WireEnds; lane: numb
   const color = p[`wire-${wire.color}`]
   return (
     <group name={`wire-${wire.id}`} userData={{ color: wire.color, kind: wire.kind }}>
-      <mesh geometry={geometry} castShadow>
+      <mesh geometry={geometry}>
         <meshStandardMaterial color={color} roughness={0.5} />
       </mesh>
       {/* kapje op de pin */}

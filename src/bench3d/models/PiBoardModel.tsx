@@ -25,7 +25,7 @@ export function boardShape(): Shape {
 function Block({ u, v, w, d, h, color, name }: { u: number; v: number; w: number; d: number; h: number; color: PaletteToken; name: string }) {
   const p = usePalette()
   return (
-    <mesh name={name} position={[u, PI_BOARD.thickness + h / 2, v]}>
+    <mesh name={name} position={[u, PI_BOARD.thickness + h / 2, v]} castShadow receiveShadow>
       <boxGeometry args={[w, h, d]} />
       <meshStandardMaterial color={p[color]} roughness={color === 'metal' ? 0.35 : 0.7} metalness={color === 'metal' ? 0.8 : 0.1} />
     </mesh>

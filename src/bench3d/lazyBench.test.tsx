@@ -32,8 +32,9 @@ describe('hasWebGL', () => {
 
 describe('LazyBench3D', () => {
   it('toont zonder WebGL een Nederlandse melding en laadt de 3D-code niet', () => {
-    render(<LazyBench3D />)
+    render(<LazyBench3D parts={[]} connecting={null} error={null} locked={false} dispatch={() => {}}><p>kind</p></LazyBench3D>)
     expect(screen.getByRole('alert')).toHaveTextContent('3D wordt niet ondersteund')
+    expect(screen.getByText('kind')).toBeInTheDocument()
   })
   it('NoWebGLNotice legt uit wat er mis is', () => {
     render(<NoWebGLNotice />)

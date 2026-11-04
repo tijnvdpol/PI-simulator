@@ -1,4 +1,5 @@
 import { Suspense, lazy } from 'react'
+import type { BenchProps } from '../bench/components/Bench'
 import { hasWebGL } from './webgl'
 
 let promise: Promise<typeof import('./Bench3D')> | null = null
@@ -24,11 +25,12 @@ export function NoWebGLNotice() {
   )
 }
 
-export function LazyBench3D() {
-  if (!hasWebGL()) return <NoWebGLNotice />
+/** De 3D-werkbank, lazy geladen. Zonder WebGL een melding; de kinderen (zoals de lege-staat-uitnodiging) blijven dan zichtbaar. */
+export function LazyBench3D(props: BenchProps) {
+  if (!hasWebGL()) return <div data-testid="bench" className="relative h-full w-full"><NoWebGLNotice />{props.children}</div>
   return (
     <Suspense fallback={<div role="status" className="flex h-full items-center justify-center text-fg-muted">3D-werkbank wordt geladen…</div>}>
-      <Bench3D />
+      <Bench3D {...props} />
     </Suspense>
   )
 }

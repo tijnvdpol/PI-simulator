@@ -1,8 +1,7 @@
-import { Html } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef } from 'react'
 import { Color, Object3D, type InstancedMesh } from 'three'
-import { PINS, pinByPhysical } from '../../pinout/pinout'
+import { PINS } from '../../pinout/pinout'
 import { HEADER, PI_BOARD, pinBoardMm } from '../geometry'
 import { usePalette } from '../palette'
 
@@ -12,6 +11,8 @@ export interface PinHeaderProps {
   /** Pinnen waar iets mis mee is (code wil iets, maar er zit niets op). */
   issuePins?: number[]
   onPinClick?: (physical: number) => void
+  /** Welke pin is er onder de muis (of null)? De tooltip staat in de HTML-laag. */
+  onHover?: (physical: number | null) => void
 }
 
 /** Kleur van pin `physical` in de huidige toestand. */
@@ -27,12 +28,11 @@ export function pinColor(
 }
 
 /** De 40 pinnen van de GPIO-header als één InstancedMesh, met een onzichtbare grotere doelmesh voor hover en klik. */
-export function PinHeader({ selectable, issuePins, onPinClick }: PinHeaderProps) {
+export function PinHeader({ selectable, issuePins, onPinClick, onHover }: PinHeaderProps) {
   const p = usePalette()
   const invalidate = useThree((s) => s.invalidate)
   const pins = useRef<InstancedMesh>(null)
   const hits = useRef<InstancedMesh>(null)
-  const [hover, setHover] = useState<number | null>(null)
 
   const colors = useMemo(() => ({ gold: p.gold, accent: p.accent, danger: p.danger, dim: p['metal-dark'] }), [p])
 
@@ -59,9 +59,6 @@ export function PinHeader({ selectable, issuePins, onPinClick }: PinHeaderProps)
     invalidate()
   }, [colors, selectable, issuePins, invalidate])
 
-  const info = hover === null ? null : pinByPhysical(hover)
-  const at = hover === null ? null : pinBoardMm(hover)
-
   return (
     <group name="pin-header">
       <instancedMesh ref={pins} args={[undefined, undefined, 40]} name="pins">
@@ -74,9 +71,9 @@ export function PinHeader({ selectable, issuePins, onPinClick }: PinHeaderProps)
         name="pin-hits"
         onPointerMove={(e) => {
           e.stopPropagation()
-          if (e.instanceId !== undefined) setHover(e.instanceId + 1)
+          if (e.instanceId !== undefined) onHover?.(e.instanceId + 1)
         }}
-        onPointerOut={() => setHover(null)}
+        onPointerOut={() => onHover?.(null)}
         onClick={(e) => {
           if (e.instanceId === undefined) return
           const physical = e.instanceId + 1
@@ -86,14 +83,6 @@ export function PinHeader({ selectable, issuePins, onPinClick }: PinHeaderProps)
         <boxGeometry args={[2.2, HEADER.pinTop, 2.2]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </instancedMesh>
-      {info && at && (
-        <Html position={[at.u, PI_BOARD.thickness + HEADER.pinTop + 2, at.v]} center style={{ pointerEvents: 'none' }}>
-          <div role="tooltip" className="whitespace-nowrap rounded-ui border border-line bg-ink px-2 py-1 text-xs text-fg">
-            <strong>Pin {info.physical} · {info.naam}</strong>
-            <span className="text-fg-muted"> · {info.functie}</span>
-          </div>
-        </Html>
-      )}
     </group>
   )
 }
