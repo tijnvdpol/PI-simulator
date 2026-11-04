@@ -10,6 +10,10 @@ export interface PinHeaderProps {
   selectable?: number[]
   /** Pinnen waar iets mis mee is (code wil iets, maar er zit niets op). */
   issuePins?: number[]
+  /** Pro-modus: elke pin is klikbaar (voor draden), zonder de andere te dimmen. */
+  clickAll?: boolean
+  /** Pro-modus: pinnen die extra opvallen (bijv. het begin van een draad). */
+  marked?: number[]
   onPinClick?: (physical: number) => void
   /** Welke pin is er onder de muis (of null)? De tooltip staat in de HTML-laag. */
   onHover?: (physical: number | null) => void
@@ -28,7 +32,7 @@ export function pinColor(
 }
 
 /** De 40 pinnen van de GPIO-header als één InstancedMesh, met een onzichtbare grotere doelmesh voor hover en klik. */
-export function PinHeader({ selectable, issuePins, onPinClick, onHover }: PinHeaderProps) {
+export function PinHeader({ selectable, issuePins, clickAll, marked, onPinClick, onHover }: PinHeaderProps) {
   const p = usePalette()
   const invalidate = useThree((s) => s.invalidate)
   const pins = useRef<InstancedMesh>(null)
@@ -54,10 +58,10 @@ export function PinHeader({ selectable, issuePins, onPinClick, onHover }: PinHea
   useLayoutEffect(() => {
     const m = pins.current
     if (!m) return
-    for (const pin of PINS) m.setColorAt(pin.physical - 1, pinColor(pin.physical, colors, selectable, issuePins))
+    for (const pin of PINS) m.setColorAt(pin.physical - 1, marked?.includes(pin.physical) ? colors.accent : pinColor(pin.physical, colors, selectable, issuePins))
     if (m.instanceColor) m.instanceColor.needsUpdate = true
     invalidate()
-  }, [colors, selectable, issuePins, invalidate])
+  }, [colors, selectable, issuePins, marked, invalidate])
 
   return (
     <group name="pin-header">
@@ -77,7 +81,7 @@ export function PinHeader({ selectable, issuePins, onPinClick, onHover }: PinHea
         onClick={(e) => {
           if (e.instanceId === undefined) return
           const physical = e.instanceId + 1
-          if (selectable?.includes(physical)) { e.stopPropagation(); onPinClick?.(physical) }
+          if (clickAll || selectable?.includes(physical)) { e.stopPropagation(); onPinClick?.(physical) }
         }}
       >
         <boxGeometry args={[2.2, HEADER.pinTop, 2.2]} />

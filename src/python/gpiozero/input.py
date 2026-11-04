@@ -12,6 +12,8 @@ class Button(Device):
 
     def __init__(self, pin=None, *, pull_up=True, active_state=None, bounce_time=None, hold_time=1, hold_repeat=False, pin_factory=None):
         super().__init__(pin)
+        if self._pin is not None:
+            _hw.setMode(self._pin, "none" if pull_up is None else ("up" if pull_up else "down"))
         self.pull_up = pull_up
         self.hold_time = hold_time
         self._when_pressed = None

@@ -1,7 +1,8 @@
 import { SPI_PINS, nearestGnd, pinByPhysical } from '../pinout/pinout'
 import type { Part } from '../project/types'
 
-export type WireColor = 'red' | 'black' | 'blue' | 'green' | 'yellow' | 'orange' | 'purple'
+export const WIRE_COLORS = ['red', 'black', 'blue', 'green', 'yellow', 'orange', 'purple'] as const
+export type WireColor = (typeof WIRE_COLORS)[number]
 
 export interface Wire {
   id: string

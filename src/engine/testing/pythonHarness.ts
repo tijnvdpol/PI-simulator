@@ -1,6 +1,6 @@
 import { loadPyodide, type PyodideInterface } from 'pyodide'
 import { resolve } from 'node:path'
-import { HardwareState, type HardwareBridge, type PinWarning } from '../hardwareState'
+import { HardwareState, type HardwareBridge, type PinMode, type PinWarning } from '../hardwareState'
 import { bootPython } from '../boot'
 import type { Part, PartKind } from '../../project/types'
 
@@ -41,6 +41,7 @@ export class FakeBridge implements HardwareBridge {
     this.outputs.set(g, h)
   }
   readAdc(c: number) { return this.state.getAdcRaw(c) }
+  setMode(g: number, mode: PinMode) { this.state.setMode(g, mode) }
   warn(code: 'pin-unconnected' | 'pin-wrong-kind', info: PinWarning) { this.warnings.push({ code, info }) }
 }
 
@@ -63,6 +64,7 @@ const delegate: HardwareBridge = {
   readButton: (g) => current.readButton(g),
   writeOutput: (g, l) => current.writeOutput(g, l),
   readAdc: (c) => current.readAdc(c),
+  setMode: (g, m) => current.setMode(g, m),
   warn: (code, info) => current.warn(code, info),
 }
 

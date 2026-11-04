@@ -10,10 +10,15 @@ const KIND_CH = KIND_GPIO + GPIO_COUNT
 const BUTTON = KIND_CH + ADC_CHANNELS
 const OUTPUT = BUTTON + GPIO_COUNT
 const ADC = OUTPUT + GPIO_COUNT
-const SLEEP = ADC + ADC_CHANNELS
+const MODE = ADC + ADC_CHANNELS
+const SLEEP = MODE + GPIO_COUNT
 const TOTAL = SLEEP + 1
 
 const OUT_SCALE = 1000
+
+/** Hoe de Python-code een GPIO gebruikt (gemeld door de nep-gpiozero; nodig voor de pro-modus). */
+export type PinMode = 'out' | 'up' | 'down' | 'none'
+const MODE_CODES: readonly (PinMode | null)[] = [null, 'out', 'up', 'down', 'none']
 
 const kindCode = (k: PartKind) => PART_KINDS.indexOf(k) + 1
 const kindFromCode = (c: number): PartKind | null => (c > 0 ? PART_KINDS[c - 1] ?? null : null)
@@ -63,6 +68,15 @@ export class HardwareState {
   }
   getAdcRaw(c: number): number { return Atomics.load(this.a, ADC + c) }
 
+  setMode(g: number, mode: PinMode): void {
+    if (g >= 0 && g < GPIO_COUNT) Atomics.store(this.a, MODE + g, MODE_CODES.indexOf(mode))
+  }
+  /** `null` zolang de code de pin niet gebruikt. */
+  getMode(g: number): PinMode | null {
+    return g >= 0 && g < GPIO_COUNT ? MODE_CODES[Atomics.load(this.a, MODE + g)] ?? null : null
+  }
+  resetModes(): void { this.a.fill(0, MODE, MODE + GPIO_COUNT) }
+
   resetOutputs(): void { this.a.fill(0, OUTPUT, OUTPUT + GPIO_COUNT) }
   resetButtons(): void { this.a.fill(0, BUTTON, BUTTON + GPIO_COUNT) }
 
@@ -92,6 +106,7 @@ export interface HardwareBridge {
   readButton(g: number): boolean
   writeOutput(g: number, level: number): void
   readAdc(c: number): number
+  setMode(g: number, mode: PinMode): void
   warn(code: 'pin-unconnected' | 'pin-wrong-kind', info: PinWarning): void
 }
 
@@ -104,6 +119,7 @@ export function bridgeFromState(state: HardwareState, warn: HardwareBridge['warn
     readButton: (g) => state.isButtonPressed(g),
     writeOutput: (g, level) => state.setOutput(g, level),
     readAdc: (c) => state.getAdcRaw(c),
+    setMode: (g, mode) => state.setMode(g, mode),
     warn,
   }
 }

@@ -3,19 +3,23 @@ import { benchWarnings } from '../bench/warnings'
 import { celsiusToRaw } from '../bench/liveControls'
 import { createHarness, type Harness } from '../engine/testing/pythonHarness'
 import { parseProject, serializeProject } from '../project/parse'
+import { analyze } from '../circuit/analyze'
+import { effectiveParts, inputsFromHardware, syncHardware } from '../circuit/live'
+import { buildShareUrl, decodeShare } from '../project/share'
 import { EXAMPLES } from './index'
 
 const ex = (id: string) => EXAMPLES.find((e) => e.id === id)!
 
 describe('voorbeeldprojecten', () => {
-  it('er zijn er drie, met titel en uitleg', () => {
-    expect(EXAMPLES.map((e) => e.id)).toEqual(['blink', 'knop-led', 'temperatuur-alarm'])
+  it('er zijn drie simpele en drie pro-voorbeelden, met titel en uitleg', () => {
+    expect(EXAMPLES.map((e) => e.id)).toEqual(['blink', 'knop-led', 'temperatuur-alarm', 'pro-led', 'pro-knop', 'pro-stoplicht'])
+    expect(EXAMPLES.filter((e) => e.project.mode === 'pro')).toHaveLength(3)
     for (const e of EXAMPLES) {
       expect(e.titel.length).toBeGreaterThan(3)
       expect(e.uitleg.length).toBeGreaterThan(10)
     }
   })
-  it.each(EXAMPLES.map((e) => [e.id, e] as const))('%s: geldig project, alles verbonden, geen waarschuwingen', (_id, e) => {
+  it.each(EXAMPLES.filter((e) => e.project.mode === 'simple').map((e) => [e.id, e] as const))('%s: geldig project, alles verbonden, geen waarschuwingen', (_id, e) => {
     expect(parseProject(JSON.parse(serializeProject(e.project)))).toEqual({ ok: true, value: e.project })
     expect(e.project.parts.length).toBeGreaterThan(0)
     expect(e.project.parts.every((p) => p.connection !== null)).toBe(true)
@@ -70,5 +74,56 @@ describe('voorbeelden draaien zonder fouten', () => {
     expect(h.stdout.some((l) => /^20\.\d °C$/.test(l))).toBe(true)
     expect(h.stdout.some((l) => /^3[45]\.\d °C$/.test(l))).toBe(true)
     expect(h.bridge.warnings).toEqual([])
+  })
+})
+
+describe('pro-voorbeelden', () => {
+  const pros = EXAMPLES.filter((e) => e.project.mode === 'pro')
+  it.each(pros.map((e) => [e.id, e] as const))('%s: geldig project, geen simpele onderdelen, deellink niet te lang', (_id, e) => {
+    expect(parseProject(JSON.parse(serializeProject(e.project)))).toEqual({ ok: true, value: e.project })
+    expect(e.project.parts).toEqual([])
+    expect(e.project.pro!.parts.length).toBeGreaterThan(0)
+    expect(e.project.pro!.wires.length).toBeGreaterThan(0)
+    const url = buildShareUrl(e.project, 'https://pi-simulator.vercel.app/')
+    expect(url.length).toBeLessThan(2000)
+    expect(decodeShare(url.slice(url.indexOf('#')))).toEqual({ ok: true, value: e.project })
+  })
+  it.each(pros.map((e) => [e.id, e] as const))('%s: de schakeling klopt en het programma draait zonder waarschuwingen', async (id, e) => {
+    const h = await createHarness()
+    const circuit = e.project.pro!
+    const frame = (pressed: Record<string, boolean> = {}) => {
+      const inputs = inputsFromHardware(h.bridge.state, { pressed })
+      const result = analyze(circuit, inputs)
+      h.bridge.state.setParts(effectiveParts(result))
+      syncHardware(h.bridge.state, result, inputs)
+      return result
+    }
+    frame()
+    const seen: Record<string, string> = {}
+    const lit = (r: ReturnType<typeof frame>) => Object.entries(r.parts).filter(([, p]) => p.status === 'on').map(([k]) => k)
+    if (id === 'pro-knop') {
+      h.bridge.at(0.1, () => frame())
+      h.bridge.at(0.9, () => { frame({ p1: true }) })
+      h.bridge.at(1.0, () => { seen.pressed = lit(frame({ p1: true })).join() })
+      h.bridge.at(1.2, () => { frame({ p1: false }) })
+      h.bridge.at(1.6, () => { seen.released = lit(frame()).join() })
+    } else if (id === 'pro-stoplicht') {
+      h.bridge.at(1, () => { seen.rood = lit(frame()).join() })
+      h.bridge.at(4, () => { seen.groen = lit(frame()).join() })
+      h.bridge.at(7, () => { seen.geel = lit(frame()).join() })
+    } else {
+      h.bridge.at(0.5, () => { seen.aan = lit(frame()).join() })
+      h.bridge.at(1.5, () => { seen.uit = lit(frame()).join() })
+    }
+    h.bridge.stopAfter(8)
+    const r = await h.run(e.project.code)
+    expect(r.error?.message).toContain('TestTimeLimit')
+    expect(h.bridge.warnings).toEqual([])
+    const final = frame()
+    expect(final.issues).toEqual([])
+    expect(final.short).toBe(false)
+    if (id === 'pro-led') expect(seen).toEqual({ aan: 'p2', uit: '' })
+    if (id === 'pro-knop') expect(seen).toEqual({ pressed: 'p3', released: 'p3' }) // toggle: aan na de eerste druk
+    if (id === 'pro-stoplicht') expect(seen).toEqual({ rood: 'p2', groen: 'p6', geel: 'p4' })
   })
 })

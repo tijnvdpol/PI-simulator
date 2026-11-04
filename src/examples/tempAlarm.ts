@@ -1,7 +1,8 @@
 import type { Project } from '../project/types'
 
 export const tempAlarm: Project = {
-  version: 1,
+  version: 2,
+  mode: 'simple',
   name: 'Temperatuuralarm',
   parts: [
     { id: 'part-1', kind: 'temperature', x: 300, y: 130, connection: { type: 'adc', channel: 0 } },

@@ -85,3 +85,14 @@ describe('bridgeFromState', () => {
     expect(s.getOutput(17)).toBe(1)
   })
 })
+
+describe('pin-modus (pro-modus)', () => {
+  it('onthoudt hoe een GPIO gebruikt wordt en wist dat weer', () => {
+    const s = new HardwareState(new ArrayBuffer(HardwareState.BYTES))
+    expect(s.getMode(17)).toBeNull()
+    s.setMode(17, 'out'); s.setMode(27, 'up'); s.setMode(22, 'down'); s.setMode(5, 'none')
+    expect([s.getMode(17), s.getMode(27), s.getMode(22), s.getMode(5)]).toEqual(['out', 'up', 'down', 'none'])
+    s.resetModes()
+    expect(s.getMode(17)).toBeNull()
+  })
+})
