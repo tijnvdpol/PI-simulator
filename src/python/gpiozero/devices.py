@@ -3,6 +3,7 @@ from pyodide.ffi import to_js
 from js import Object
 
 from . import _pins
+from .exc import DeviceClosed, GPIODeviceError
 
 
 def kind_of(value):
@@ -21,9 +22,11 @@ class Device:
     """Basisklasse: claimt een pin en controleert of er een onderdeel op de werkbank zit."""
     _part_kind = None   # 'led', 'button', 'buzzer', ... (None = niet controleren)
 
-    def __init__(self, pin=None):
+    def __init__(self, pin=None, *, pin_factory=None):
         self._pin = None
         self._closed = False
+        if pin is None and self._part_kind is not None:
+            raise GPIODeviceError("No pin specified: say which pin the %s is on, for example %s(17)" % (self._part_kind, type(self).__name__))
         if pin is not None:
             gpio = _pins.parse_pin(pin)
             _pins.claim(gpio, self)
@@ -39,6 +42,10 @@ class Device:
             warn("pin-unconnected", str(self._pin), name)
         elif found != self._part_kind:
             warn("pin-wrong-kind", str(self._pin), name, found)
+
+    def _check_open(self):
+        if self._closed:
+            raise DeviceClosed("%s is closed or uninitialized" % type(self).__name__)
 
     @property
     def pin(self):

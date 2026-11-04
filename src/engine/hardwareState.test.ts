@@ -55,6 +55,18 @@ describe('HardwareState', () => {
   })
 })
 
+describe('resetButtons', () => {
+  it('laat alle knoppen los maar laat uitgangen en ADC staan', () => {
+    const s = new HardwareState()
+    s.setButtonPressed(2, true); s.setButtonPressed(17, true); s.setOutput(4, 1); s.setAdcRaw(0, 5)
+    s.resetButtons()
+    expect(s.isButtonPressed(2)).toBe(false)
+    expect(s.isButtonPressed(17)).toBe(false)
+    expect(s.getOutput(4)).toBe(1)
+    expect(s.getAdcRaw(0)).toBe(5)
+  })
+})
+
 describe('bridgeFromState', () => {
   it('sleep blokkeert echt (Atomics.wait)', () => {
     const b = bridgeFromState(new HardwareState(), () => {})

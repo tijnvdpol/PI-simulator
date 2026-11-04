@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import { BuzzerSound } from '../audio/buzzer'
 import { Bench } from '../bench/components/Bench'
 import { snapshot, syncAnalog } from '../bench/liveControls'
+import { defaultDropPosition } from '../bench/partGeometry'
 import { useHardwareFrame } from '../bench/useHardwareFrame'
 import { checkEnvironment } from '../engine/environment'
 import { explainError, explainPinWarning, type ErrorExplanation, type PinIssue } from '../engine/explainError'
@@ -169,7 +170,11 @@ function Simulator() {
       <ExamplesMenu open={examplesOpen} onClose={() => setExamplesOpen(false)} onPick={openProject} />
       <main className="grid min-h-0 flex-1 grid-cols-[16rem_1fr_28rem]">
         <aside aria-label="Onderdelenbak" className="overflow-y-auto border-r border-line bg-panel">
-          <PartsTray />
+          <PartsTray
+            onAdd={(kind) => {
+              if (status !== 'draait') dispatchBench({ type: 'add', kind, ...defaultDropPosition(bench.parts) })
+            }}
+          />
         </aside>
         <section aria-label="Werkbank" className="relative min-h-0 bg-bg">
           <Bench

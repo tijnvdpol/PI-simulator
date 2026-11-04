@@ -15,7 +15,7 @@ const HINTS: Record<PartKind, string> = {
   potentiometer: 'Een draaiknop met een stand',
 }
 
-export function PartsTray() {
+export function PartsTray({ onAdd }: { onAdd?: (kind: PartKind) => void }) {
   return (
     <div className="flex flex-col gap-3 p-4">
       <h2 className="text-sm font-semibold text-fg-muted">Onderdelen</h2>
@@ -25,12 +25,14 @@ export function PartsTray() {
           <li
             key={kind}
             draggable
-            aria-label={`${LABELS[kind]} (${PART_NAMES_NL[kind]}) slepen`}
+            tabIndex={0}
+            aria-label={`${LABELS[kind]} (${PART_NAMES_NL[kind]}) — sleep naar de werkbank of druk op Enter om toe te voegen`}
+            onKeyDown={(e) => { if (onAdd && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onAdd(kind) } }}
             onDragStart={(e) => {
               e.dataTransfer.setData(DRAG_TYPE, kind)
               e.dataTransfer.effectAllowed = 'copy'
             }}
-            className="flex cursor-grab items-center gap-3 rounded-ui border border-line bg-bg p-3 transition-colors duration-(--dur) hover:border-accent active:cursor-grabbing"
+            className="flex cursor-grab focus-visible:outline-2 focus-visible:outline-accent items-center gap-3 rounded-ui border border-line bg-bg p-3 transition-colors duration-(--dur) hover:border-accent active:cursor-grabbing"
           >
             <PartIcon kind={kind} />
             <div>

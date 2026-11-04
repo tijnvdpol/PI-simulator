@@ -229,9 +229,15 @@ export function Bench({ parts, connecting, error, locked, dispatch, issues = [],
               onPointerUp={() => onPointerUp(part)}
               onPointerCancel={() => onPointerUp(part)}
               onPointerLeave={() => press(part, false)}
-              tabIndex={locked && part.kind === 'button' ? 0 : undefined}
-              onKeyDown={(e) => { if (locked && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); press(part, true) } }}
-              onKeyUp={(e) => { if (locked && (e.key === ' ' || e.key === 'Enter')) press(part, false) }}
+              tabIndex={0}
+              aria-label={`${PART_NAMES_NL[part.kind]}${placeLabel(part)}`}
+              onKeyDown={(e) => {
+                if (e.key !== ' ' && e.key !== 'Enter') return
+                e.preventDefault()
+                if (locked) press(part, true)
+                else if (!e.repeat) onPartClick(part)
+              }}
+              onKeyUp={(e) => { if (e.key === ' ' || e.key === 'Enter') press(part, false) }}
             >
               {isSel && <rect x="-40" y="-40" width="80" height="96" rx="8" fill="none" className="stroke-accent" strokeWidth="2" strokeDasharray="5 4" />}
               <rect x="-36" y="-36" width="72" height="88" fill="transparent" />
