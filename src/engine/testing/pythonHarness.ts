@@ -83,16 +83,13 @@ export async function createHarness(opts: { t0?: number } = {}): Promise<Harness
     stdout,
     pyodide,
     async run(code: string): Promise<RunOutcome> {
-      try {
-        pyodide.runPython('import pisim.runtime; pisim.runtime.reset()')
-        await pyodide.runPythonAsync(code)
-        return { error: null }
-      } catch (e) {
-        const message = String((e as Error).message ?? e)
-        const last = message.trim().split('\n').pop() ?? ''
-        const m = /^([\w.]+):\s?(.*)$/.exec(last)
-        return { error: { type: (m?.[1] ?? 'Error').split('.').pop()!, message: m?.[2] ?? last, line: null, traceback: message } }
-      }
+      const runner = pyodide.pyimport('pisim.runner')
+      const res = runner.run(code)
+      runner.destroy()
+      if (res === undefined || res === null) return { error: null }
+      const error = res.toJs({ dict_converter: Object.fromEntries }) as RunError
+      res.destroy()
+      return { error }
     },
   }
 }
