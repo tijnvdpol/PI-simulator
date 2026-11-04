@@ -17,6 +17,18 @@ class GPIOPinInUse(GPIODeviceError):
     pass
 
 
+class GPIOPinMissing(GPIODeviceError, ValueError):
+    pass
+
+
+class OutputDeviceError(GPIODeviceError):
+    pass
+
+
+class OutputDeviceBadValue(OutputDeviceError, ValueError):
+    pass
+
+
 class PinError(GPIOZeroError):
     pass
 

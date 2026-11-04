@@ -131,3 +131,8 @@ let nextId = 0
 export const onPin = (kind: PartKind, physical: number): Part => ({ id: `t${nextId++}`, kind, x: 0, y: 0, connections: { signal: { type: 'pin', physical } } })
 /** Onderdeel op een ADC-kanaal, voor tests. */
 export const onChannel = (kind: PartKind, channel: number): Part => ({ id: `t${nextId++}`, kind, x: 0, y: 0, connections: { signal: { type: 'adc', channel } } })
+/** Onderdeel met meerdere aansluitingen, bijv. `withPins('rgbled', { r: 11, g: 13, b: 15, gnd: 14 })` (fysieke pinnummers). */
+export const withPins = (kind: PartKind, pins: Record<string, number>): Part => ({
+  id: `t${nextId++}`, kind, x: 0, y: 0,
+  connections: Object.fromEntries(Object.entries(pins).map(([k, physical]) => [k, { type: 'pin' as const, physical }])),
+})

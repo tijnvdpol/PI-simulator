@@ -7,7 +7,9 @@ export interface PinIssue { id: string; pin: string; message: string }
 
 const PART_NAMES: Record<string, string> = {
   led: 'led', button: 'knop', buzzer: 'buzzer', temperature: 'temperatuursensor', potentiometer: 'potmeter',
+  pwmled: 'dimbare led', rgbled: 'RGB-led', servo: 'servo', distance: 'afstandssensor', oled: 'OLED-scherm',
   LED: 'led', Button: 'knop', Buzzer: 'buzzer', MCP3008: 'sensor of potmeter',
+  PWMLED: 'dimbare led', RGBLED: 'RGB-led', Servo: 'servo', AngularServo: 'servo', DistanceSensor: 'afstandssensor',
 }
 const TYPE_NAMES: Record<string, string> = {
   int: 'getal', float: 'kommagetal', str: 'tekst', bool: 'ja/nee-waarde', list: 'lijst', NoneType: 'niets (None)', tuple: 'tuple', dict: 'woordenboek',
@@ -17,6 +19,11 @@ const tn = (t: string) => TYPE_NAMES[t] ?? t
 const IMPORT_TIPS: Record<string, string> = {
   LED: 'from gpiozero import LED', Button: 'from gpiozero import Button', Buzzer: 'from gpiozero import Buzzer',
   MCP3008: 'from gpiozero import MCP3008', sleep: 'from time import sleep', pause: 'from signal import pause',
+  PWMLED: 'from gpiozero import PWMLED', RGBLED: 'from gpiozero import RGBLED', Servo: 'from gpiozero import Servo',
+  AngularServo: 'from gpiozero import AngularServo', DistanceSensor: 'from gpiozero import DistanceSensor',
+  canvas: 'from luma.core.render import canvas', ssd1306: 'from luma.oled.device import ssd1306',
+  i2c: 'from luma.core.interface.serial import i2c',
+  Image: 'from PIL import Image', ImageDraw: 'from PIL import ImageDraw', ImageFont: 'from PIL import ImageFont',
 }
 
 type Rule = [RegExp, (m: RegExpExecArray, at: (s: string) => string) => string]
@@ -57,6 +64,39 @@ const GROUPS: Record<string, { titel: string; rules: Rule[]; fallback: string }>
     titel: 'Pin al in gebruik',
     rules: [[/pin (GPIO\d+) is already in use/, (m, at) => at(`je gebruikt ${m[1]} voor twee dingen tegelijk. Maak per pin maar één onderdeel in je code, of roep \`.close()\` aan voordat je de pin opnieuw gebruikt.`)]],
     fallback: 'je gebruikt dezelfde pin voor twee dingen tegelijk. Roep `.close()` aan voordat je de pin opnieuw gebruikt.',
+  },
+  GPIOPinMissing: {
+    titel: 'Pin ontbreekt',
+    rules: [
+      [/red, green, and blue/, (_m, at) => at('een RGB-led heeft drie pinnen nodig: rood, groen en blauw. Schrijf bijvoorbeeld `RGBLED(17, 27, 22)`.')],
+      [/echo and trigger/, (_m, at) => at('een afstandssensor heeft twee pinnen nodig: `echo` en `trigger`. Schrijf bijvoorbeeld `DistanceSensor(echo=24, trigger=23)`.')],
+    ],
+    fallback: 'je hebt niet voor alle aansluitingen een pin opgegeven.',
+  },
+  OutputDeviceBadValue: {
+    titel: 'Waarde buiten het bereik',
+    rules: [
+      [/PWM value must be between 0 and 1/, (_m, at) => at('een dimbare led neemt een waarde tussen 0 en 1 (0 = uit, 1 = vol aan).')],
+      [/Servo value must be between -1 and 1/, (_m, at) => at('een servo neemt een waarde tussen −1 en 1 (−1 = links, 0 = midden, 1 = rechts), of `None` om hem los te laten.')],
+      [/AngularServo angle must be between (\S+) and (\S+)/, (m, at) => at(`deze servo neemt een hoek tussen ${m[1]} en ${m[2]} graden, of \`None\` om hem los te laten.`)],
+      [/color component/, (_m, at) => at('elke kleur van een RGB-led is een getal tussen 0 en 1, bijvoorbeeld `led.color = (1, 0, 0)` voor rood.')],
+      [/color must be a tuple/, (_m, at) => at('een kleur bestaat uit drie getallen, bijvoorbeeld `led.color = (1, 0, 0)` voor rood.')],
+    ],
+    fallback: 'je geeft een waarde die niet past bij dit onderdeel.',
+  },
+  DeviceNotFoundError: {
+    titel: 'OLED-scherm niet gevonden',
+    rules: [[/0x([0-9A-Fa-f]{2})/, (m, at) => {
+      const addr = m[1].toUpperCase()
+      const known = addr === '3C' ? '' : ' De simulator kent alleen een scherm op adres 0x3C.'
+      return at(`er zit geen OLED-scherm op I²C-adres 0x${addr}.${known} Zet een OLED-scherm op de werkbank en sluit alle vier de aansluitingen aan: SDA op pin 3 (GPIO 2), SCL op pin 5 (GPIO 3), 3V3 en GND.`)
+    }]],
+    fallback: 'er is geen OLED-scherm gevonden. Zet er een op de werkbank en sluit SDA op pin 3 (GPIO 2), SCL op pin 5 (GPIO 3), 3V3 en GND aan.',
+  },
+  ImportError: {
+    titel: 'Dit scherm kent de simulator niet',
+    rules: [[/cannot import name '(\w+)' from 'luma\./, (m, at) => at(`\`${m[1]}\` bestaat niet in de simulator. Gebruik het scherm \`ssd1306\` (het OLED-scherm van 128×64): \`from luma.oled.device import ssd1306\`.`)]],
+    fallback: 'Python kan iets niet laden wat je importeert. Controleer de naam.',
   },
   GPIODeviceError: { titel: 'Pin ontbreekt', rules: [], fallback: 'je hebt niet gezegd op welke pin het onderdeel zit. Schrijf bijvoorbeeld `LED(17)` of `Button(27)`.' },
   DeviceClosed: { titel: 'Onderdeel is gesloten', rules: [], fallback: 'je gebruikt een onderdeel nadat je `.close()` hebt aangeroepen. Maak het onderdeel opnieuw aan of haal `.close()` weg.' },

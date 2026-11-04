@@ -149,3 +149,76 @@ describe('pin-meldingen', () => {
     expect(explainPowerPin({ kind: 'buzzer' }, pinByPhysical(6))).toContain('GND')
   })
 })
+
+describe('uitleg voor de nieuwe onderdelen (fase 2)', () => {
+  let h: Harness
+  beforeAll(async () => { h = await createHarness() })
+  const explain = async (code: string) => {
+    const r = await h.run(code)
+    expect(r.error).not.toBeNull()
+    return explainError(r.error as PythonErrorInfo)
+  }
+
+  it('OLED niet gevonden: uitleg met SDA/SCL-pinnen en voeding', async () => {
+    h.bridge.setParts([])
+    const e = await explain('from luma.core.interface.serial import i2c\ni2c(port=1, address=0x3C)')
+    expect(e.titel).toBe('OLED-scherm niet gevonden')
+    expect(e.uitleg).toContain('0x3C')
+    expect(e.uitleg).toContain('pin 3 (GPIO 2)')
+    expect(e.uitleg).toContain('pin 5 (GPIO 3)')
+    expect(e.uitleg).toContain('3V3')
+    expect(e.uitleg).toContain('GND')
+    expect(e.uitleg).toMatch(/^Regel 2:/)
+  })
+  it('ander I²C-adres noemt het adres dat de simulator wel kent', async () => {
+    h.bridge.setParts([])
+    const e = await explain('from luma.core.interface.serial import i2c\ni2c(address=0x3D)')
+    expect(e.uitleg).toContain('0x3D')
+    expect(e.uitleg).toContain('0x3C')
+  })
+  it('pin vergeten bij een RGB-led', async () => {
+    const e = await explain('from gpiozero import RGBLED\nRGBLED(17, 27)')
+    expect(e.titel).toBe('Pin ontbreekt')
+    expect(e.uitleg).toContain('RGBLED(17, 27, 22)')
+  })
+  it('pin vergeten bij een afstandssensor', async () => {
+    const e = await explain('from gpiozero import DistanceSensor\nDistanceSensor(echo=24)')
+    expect(e.uitleg).toContain('echo')
+    expect(e.uitleg).toContain('trigger')
+  })
+  it('waarde buiten bereik: PWMLED', async () => {
+    h.bridge.setParts([])
+    const e = await explain('from gpiozero import PWMLED\nPWMLED(18).value = 2')
+    expect(e.titel).toBe('Waarde buiten het bereik')
+    expect(e.uitleg).toContain('0 en 1')
+    expect(e.uitleg).toContain('Regel 2')
+  })
+  it('waarde buiten bereik: servo en AngularServo en kleur', async () => {
+    h.bridge.setParts([])
+    expect((await explain('from gpiozero import Servo\nServo(18).value = 5')).uitleg).toContain('−1 en 1')
+    const a = await explain('from gpiozero import AngularServo\nAngularServo(18, min_angle=0, max_angle=90, initial_angle=0).angle = 120')
+    expect(a.uitleg).toContain('0 en 90')
+    expect((await explain('from gpiozero import RGBLED\nRGBLED(17, 27, 22).color = (2, 0, 0)')).uitleg).toContain('0 en 1')
+  })
+  it('een scherm-chip die er niet is (sh1106)', async () => {
+    const e = await explain('from luma.oled.device import sh1106')
+    expect(e.titel).toBe('Dit scherm kent de simulator niet')
+    expect(e.uitleg).toContain('ssd1306')
+  })
+  it('NameError-tips voor de nieuwe klassen', async () => {
+    expect((await explain('PWMLED(18)')).uitleg).toContain('from gpiozero import PWMLED')
+    expect((await explain('RGBLED(1, 2, 3)')).uitleg).toContain('from gpiozero import RGBLED')
+    expect((await explain('AngularServo(18)')).uitleg).toContain('from gpiozero import AngularServo')
+    expect((await explain('DistanceSensor(1, 2)')).uitleg).toContain('from gpiozero import DistanceSensor')
+    expect((await explain('canvas(None)')).uitleg).toContain('from luma.core.render import canvas')
+    expect((await explain('ssd1306(None)')).uitleg).toContain('from luma.oled.device import ssd1306')
+    expect((await explain('i2c()')).uitleg).toContain('from luma.core.interface.serial import i2c')
+    expect((await explain('ImageDraw.Draw(1)')).uitleg).toContain('from PIL import ImageDraw')
+  })
+  it('pinwaarschuwingen noemen de nieuwe onderdelen bij hun Nederlandse naam', () => {
+    expect(explainPinWarning({ code: 'pin-unconnected', pin: '18', device: 'Servo' }).message).toContain('servo')
+    expect(explainPinWarning({ code: 'pin-unconnected', pin: '24', device: 'DistanceSensor' }).message).toContain('afstandssensor')
+    expect(explainPinWarning({ code: 'pin-unconnected', pin: '17', device: 'RGBLED' }).message).toContain('RGB-led')
+    expect(explainPinWarning({ code: 'pin-wrong-kind', pin: '18', device: 'PWMLED', found: 'led' }).message).toContain('dimbare led')
+  })
+})
