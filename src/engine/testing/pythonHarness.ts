@@ -84,6 +84,7 @@ export async function createHarness(opts: { t0?: number } = {}): Promise<Harness
     pyodide,
     async run(code: string): Promise<RunOutcome> {
       try {
+        pyodide.runPython('import pisim.runtime; pisim.runtime.reset()')
         await pyodide.runPythonAsync(code)
         return { error: null }
       } catch (e) {
@@ -95,3 +96,9 @@ export async function createHarness(opts: { t0?: number } = {}): Promise<Harness
     },
   }
 }
+
+let nextId = 0
+/** Onderdeel op een fysieke pin, voor tests. */
+export const onPin = (kind: PartKind, physical: number): Part => ({ id: `t${nextId++}`, kind, x: 0, y: 0, connection: { type: 'pin', physical } })
+/** Onderdeel op een ADC-kanaal, voor tests. */
+export const onChannel = (kind: PartKind, channel: number): Part => ({ id: `t${nextId++}`, kind, x: 0, y: 0, connection: { type: 'adc', channel } })
