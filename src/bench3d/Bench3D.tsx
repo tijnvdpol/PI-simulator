@@ -1,16 +1,24 @@
 import { Canvas, type ThreeEvent } from '@react-three/fiber'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { selectableTargets } from '../bench/benchState'
+import { defaultDropPosition } from '../bench/partGeometry'
+import { DRAG_TYPE } from '../ui/PartsTray'
 import type { BenchProps } from '../bench/components/Bench'
 import { benchWarnings } from '../bench/warnings'
 import { isAnalog as analog } from '../bench/benchState'
 import { pinByGpio, pinByPhysical } from '../pinout/pinout'
-import type { Part } from '../project/types'
+import { PART_KINDS, type Part, type PartKind } from '../project/types'
 import { BenchOverlays } from './BenchOverlays'
 import { CameraButtons } from './CameraButtons'
 import { VIEWS, type ViewName } from './cameraViews'
 import type { ViewRequest } from './CameraRig'
+import { PartList } from './PartList'
 import { PartOverlay } from './PartOverlay'
+import { PinMenu } from './PinMenu'
+import { placeOnTable, rayToTable } from './tablePlacement'
+import type { ClientToTable } from './TableProbe'
+import { worldToSvg } from './geometry'
+import { partWorld } from './wireGeometry'
 import { Scene } from './Scene'
 
 /** 3D-werkbank. Zelfde props als de 2D-werkbank; het datamodel en de staat blijven ongewijzigd. */
@@ -20,6 +28,10 @@ export default function Bench3D({ parts, connecting, error, locked, dispatch, is
   const [hoverPin, setHoverPin] = useState<number | null>(null)
   const pressed = useRef<string | null>(null)
   const overlayItems = useRef(new Map<string, HTMLElement>())
+  const projectRef = useRef<ClientToTable | null>(null)
+  const [dragging, setDragging] = useState(false)
+  const drag = useRef<{ id: string; offX: number; offZ: number; sx: number; sy: number; moved: boolean } | null>(null)
+  const lastDragEnd = useRef(0)
   const register = (id: string) => (el: HTMLElement | null) => { if (el) overlayItems.current.set(id, el); else overlayItems.current.delete(id) }
 
   const warnings = useMemo(() => benchWarnings(parts), [parts])
@@ -63,10 +75,62 @@ export default function Bench3D({ parts, connecting, error, locked, dispatch, is
     dispatch({ type: 'beginConnect', id: part.id })
   }, [dispatch])
 
+  // Slepen eindigt waar de muis ook losgelaten wordt, ook buiten het canvas.
+  useEffect(() => {
+    if (!dragging) return
+    const end = () => {
+      if (drag.current?.moved) lastDragEnd.current = performance.now()
+      drag.current = null
+      setDragging(false)
+    }
+    window.addEventListener('pointerup', end)
+    window.addEventListener('pointercancel', end)
+    return () => { window.removeEventListener('pointerup', end); window.removeEventListener('pointercancel', end) }
+  }, [dragging])
+
+  const onPartDown = (part: Part, e: ThreeEvent<PointerEvent>) => {
+    e.stopPropagation()
+    if (locked) { press(part, true); return }
+    const hit = rayToTable(e.ray)
+    if (!hit) return
+    const w = partWorld(part)
+    drag.current = { id: part.id, offX: hit.x - w[0], offZ: hit.z - w[2], sx: e.nativeEvent.clientX, sy: e.nativeEvent.clientY, moved: false }
+    setDragging(true)
+  }
+
+  const onTableMove = (e: ThreeEvent<PointerEvent>) => {
+    const d = drag.current
+    if (!d) return
+    if (!d.moved && Math.hypot(e.nativeEvent.clientX - d.sx, e.nativeEvent.clientY - d.sy) < 4) return
+    const hit = rayToTable(e.ray)
+    if (!hit) return
+    d.moved = true
+    const svg = worldToSvg(hit.x - d.offX, hit.z - d.offZ)
+    const spot = placeOnTable(svg.x, svg.y, parts.filter((p) => p.id !== d.id))
+    const part = parts.find((p) => p.id === d.id)
+    if (part && (part.x !== spot.x || part.y !== spot.y)) dispatch({ type: 'move', id: d.id, x: spot.x, y: spot.y })
+  }
+
+  // Neerzetten uit de onderdelenbak: de muispositie wordt een plek op de tafel en klikt vast op het raster naast de Pi.
+  const onDrop = (e: React.DragEvent) => {
+    if (locked) return
+    const kind = e.dataTransfer.getData(DRAG_TYPE) as PartKind
+    if (!PART_KINDS.includes(kind)) return
+    e.preventDefault()
+    const hit = projectRef.current?.(e.clientX, e.clientY)
+    const svg = hit ? worldToSvg(hit.x, hit.z) : defaultDropPosition(parts)
+    dispatch({ type: 'add', kind, ...placeOnTable(svg.x, svg.y, parts) })
+  }
+
   const requestView = (v: ViewName) => setView({ view: v, nonce: (view?.nonce ?? 0) + 1 })
 
   return (
-    <div data-testid="bench" className="relative h-full w-full overflow-hidden">
+    <div
+      data-testid="bench"
+      className="relative h-full w-full overflow-hidden"
+      onDragOver={(e) => { if (!locked && e.dataTransfer.types.includes(DRAG_TYPE)) e.preventDefault() }}
+      onDrop={onDrop}
+    >
       <Canvas
         frameloop="demand"
         shadows
@@ -82,14 +146,21 @@ export default function Bench3D({ parts, connecting, error, locked, dispatch, is
           issuePins={issuePins}
           onPinClick={(physical) => { if (connecting) dispatch({ type: 'connect', id: connecting, target: { type: 'pin', physical } }) }}
           overlayItems={overlayItems}
+          projectRef={projectRef}
+          controlsEnabled={!dragging}
+          onTablePointerMove={onTableMove}
           hoverPin={hoverPin}
           onPinHover={setHoverPin}
           usedChannels={usedChannels}
           view={view}
-          onPointerDown={(part, e) => { if (locked) { e.stopPropagation(); press(part, true) } }}
+          onPointerDown={onPartDown}
           onPointerUp={(part) => press(part, false)}
           onPointerOut={(part) => press(part, false)}
-          onClick={(part, e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); if (!locked) onSelect(part) }}
+          onClick={(part, e: ThreeEvent<MouseEvent>) => {
+            e.stopPropagation()
+            if (locked || performance.now() - lastDragEnd.current < 80) return
+            onSelect(part)
+          }}
           onTableClick={() => { if (connecting) dispatch({ type: 'cancelConnect' }); setSelected(null) }}
         />
       </Canvas>
@@ -117,12 +188,29 @@ export default function Bench3D({ parts, connecting, error, locked, dispatch, is
       <BenchOverlays
         locked={locked}
         connectingPart={connectingPart}
+        hideConnectHint
         error={error}
         selectedPart={selectedPart}
         warnings={warnings}
         issues={issues}
         dispatch={dispatch}
         onDeselect={() => setSelected(null)}
+      />
+      {connectingPart && !locked && (
+        <PinMenu
+          part={connectingPart}
+          targets={targets ?? { pins: [], channels: [] }}
+          onPick={(target) => dispatch({ type: 'connect', id: connectingPart.id, target })}
+          onClose={() => dispatch({ type: 'cancelConnect' })}
+        />
+      )}
+      <PartList
+        parts={parts}
+        locked={locked}
+        selectedId={selected}
+        onSelect={onSelect}
+        onRemove={(part) => { dispatch({ type: 'remove', id: part.id }); setSelected(null) }}
+        onPress={press}
       />
       <CameraButtons onView={requestView} />
       {children}

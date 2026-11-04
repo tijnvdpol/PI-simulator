@@ -9,7 +9,7 @@ const temp: Part = { id: 'part-2', kind: 'temperature', x: 600, y: 130, connecti
 
 const base = (over: Partial<SceneProps> = {}): SceneProps => ({
   parts: [], live: () => ({}), selectedId: null, locked: false, usedChannels: [], view: null,
-  overlayItems: { current: new Map() }, hoverPin: null, ...over,
+  overlayItems: { current: new Map() }, projectRef: { current: null }, hoverPin: null, ...over,
 })
 
 describe('Scene', () => {

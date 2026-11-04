@@ -7,6 +7,7 @@ import { CHIP_CENTER, type V3 } from './anchors'
 import { pinWorld } from './geometry'
 import { partWorld } from './wireGeometry'
 import { OverlayProjector } from './OverlayProjector'
+import { TableProbe, type ClientToTable } from './TableProbe'
 import { CameraRig, type ViewRequest } from './CameraRig'
 import { Mcp3008Model } from './models/Mcp3008Model'
 import { PiBoardModel } from './models/PiBoardModel'
@@ -27,6 +28,8 @@ export interface SceneProps extends PartHandlers {
   onPinClick?: (physical: number) => void
   /** HTML-elementen (labels, tooltip) die op een 3D-plek moeten staan, per id. */
   overlayItems: RefObject<Map<string, HTMLElement>>
+  /** Wordt gevuld met een functie die muispositie omzet naar een plek op de tafel (voor neerzetten uit de bak). */
+  projectRef: RefObject<ClientToTable | null>
   /** Pin onder de muis, voor de tooltip. */
   hoverPin: number | null
   onPinHover?: (physical: number | null) => void
@@ -97,6 +100,7 @@ export function Scene(props: SceneProps) {
           {...handlers}
         />
       ))}
+      <TableProbe apiRef={props.projectRef} />
       <OverlayProjector items={props.overlayItems} anchors={anchors} />
       <CameraRig request={props.view} enabled={props.controlsEnabled ?? true} />
     </>
