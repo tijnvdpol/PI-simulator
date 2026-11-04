@@ -1,4 +1,10 @@
+import { useEffect, useMemo, useState } from 'react'
+import { BuzzerSound } from '../audio/buzzer'
 import { Bench } from '../bench/components/Bench'
+import { snapshot, syncAnalog } from '../bench/liveControls'
+import { useHardwareFrame } from '../bench/useHardwareFrame'
+import { HardwareState } from '../engine/hardwareState'
+import { pinByPhysical } from '../pinout/pinout'
 import { checkEnvironment } from '../engine/environment'
 import { EmptyState } from './EmptyState'
 import { PartsTray } from './PartsTray'
@@ -8,6 +14,20 @@ import { useProject } from './useProject'
 export function App() {
   const env = checkEnvironment()
   const { bench, code, setCode, dispatchBench } = useProject()
+  const hw = useMemo(() => new HardwareState(), [])
+  const sound = useMemo(() => new BuzzerSound(), [])
+  const [sensorValues, setSensorValues] = useState<Record<string, number>>({})
+
+  // Onderdelen en sensorwaarden staan altijd in het gedeelde geheugen, zodat Python ze kan lezen.
+  useEffect(() => {
+    hw.setParts(bench.parts)
+    syncAnalog(hw, bench.parts, sensorValues)
+  }, [hw, bench.parts, sensorValues])
+
+  const live = useHardwareFrame((s) => snapshot(s, bench.parts, sensorValues), hw)
+  const buzzing = bench.parts.some((p) => p.kind === 'buzzer' && (live[p.id]?.level ?? 0) > 0)
+  useEffect(() => { sound.setActive(buzzing) }, [sound, buzzing])
+  useEffect(() => () => sound.dispose(), [sound])
 
   if (!env.ok) {
     return (
@@ -28,7 +48,15 @@ export function App() {
           <PartsTray />
         </aside>
         <section aria-label="Werkbank" className="relative min-h-0 bg-bg">
-          <Bench parts={bench.parts} connecting={bench.connecting} error={bench.error} locked={false} dispatch={dispatchBench}>
+          <Bench parts={bench.parts} connecting={bench.connecting} error={bench.error} locked={false}
+            dispatch={dispatchBench}
+            live={(part) => live[part.id] ?? {}}
+            onPartPress={(part, pressed) => {
+              const c = part.connection
+              if (c?.type === 'pin') { const g = pinByPhysical(c.physical).gpio; if (g !== null) hw.setButtonPressed(g, pressed) }
+            }}
+            sensors={{ values: sensorValues, onChange: (part, v) => setSensorValues((prev) => ({ ...prev, [part.id]: v })) }}
+          >
             {bench.parts.length === 0 && <EmptyState onOpenExamples={() => {}} />}
           </Bench>
         </section>

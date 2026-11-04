@@ -34,8 +34,10 @@ export interface BenchProps {
   live?: (part: Part) => PartLive
   /** Extra inhoud over de werkbank (bijv. de lege-staat-uitnodiging). */
   children?: ReactNode
-  /** Wordt aangeroepen met de interactie van de gebruiker op een onderdeel. */
-  renderControls?: (part: Part) => ReactNode
+  /** Knop ingedrukt/losgelaten tijdens het draaien. */
+  onPartPress?: (part: Part, pressed: boolean) => void
+  /** Schuifjes voor sensoren: waarde per onderdeel (°C bij temperatuur, 0..1 bij potmeter). */
+  sensors?: { values: Record<string, number>; onChange: (part: Part, value: number) => void }
 }
 
 const COLOR_LABELS: Record<LedColor, string> = { red: 'Rood', green: 'Groen', yellow: 'Geel', blue: 'Blauw', white: 'Wit' }
@@ -54,6 +56,29 @@ function toSvgPoint(svg: SVGSVGElement, clientX: number, clientY: number) {
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
 
+function SensorSlider({ part, value, onChange }: { part: Part; value: number | undefined; onChange: (v: number) => void }) {
+  const isTemp = part.kind === 'temperature'
+  const v = value ?? (isTemp ? 20 : 0.5)
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation()
+  return (
+    <foreignObject x="-52" y="72" width="104" height="44" onPointerDown={stop} onClick={stop}>
+      <div className="flex flex-col items-center gap-0.5 text-[11px] text-fg">
+        <input
+          type="range"
+          aria-label={isTemp ? 'Temperatuur' : 'Stand van de potmeter'}
+          className="w-24 accent-accent"
+          min={isTemp ? -10 : 0}
+          max={isTemp ? 50 : 100}
+          step={isTemp ? 0.5 : 1}
+          value={isTemp ? v : Math.round(v * 100)}
+          onChange={(e) => onChange(isTemp ? Number(e.target.value) : Number(e.target.value) / 100)}
+        />
+        <span>{isTemp ? `${v} °C` : `${Math.round(v * 100)}%`}</span>
+      </div>
+    </foreignObject>
+  )
+}
+
 function PartArt({ part, live }: { part: Part; live: PartLive }) {
   switch (part.kind) {
     case 'led': return <LedArt color={part.color} level={live.level ?? 0} />
@@ -64,11 +89,12 @@ function PartArt({ part, live }: { part: Part; live: PartLive }) {
   }
 }
 
-export function Bench({ parts, connecting, error, locked, dispatch, issues = [], live, children, renderControls }: BenchProps) {
+export function Bench({ parts, connecting, error, locked, dispatch, issues = [], live, children, onPartPress, sensors }: BenchProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [selected, setSelected] = useState<string | null>(null)
   const drag = useRef<{ id: string; sx: number; sy: number; ox: number; oy: number; moved: boolean } | null>(null)
   const suppressClick = useRef(false)
+  const pressed = useRef<string | null>(null)
 
   const wires = useMemo(() => computeWires(parts), [parts])
   const warnings = useMemo(() => benchWarnings(parts), [parts])
@@ -116,8 +142,15 @@ export function Bench({ parts, connecting, error, locked, dispatch, issues = [],
     dispatch({ type: 'beginConnect', id: part.id })
   }
 
+  const press = (part: Part, down: boolean) => {
+    if (part.kind !== 'button' || !onPartPress) return
+    if (down === (pressed.current === part.id)) return
+    pressed.current = down ? part.id : null
+    onPartPress(part, down)
+  }
+
   const onPointerDown = (e: React.PointerEvent, part: Part) => {
-    if (locked) return
+    if (locked) { press(part, true); return }
     drag.current = { id: part.id, sx: e.clientX, sy: e.clientY, ox: part.x, oy: part.y, moved: false }
     ;(e.currentTarget as Element).setPointerCapture?.(e.pointerId)
   }
@@ -132,7 +165,8 @@ export function Bench({ parts, connecting, error, locked, dispatch, issues = [],
     const scale = Math.max(VIEW_W / (r.width || VIEW_W), VIEW_H / (r.height || VIEW_H))
     dispatch({ type: 'move', id: d.id, x: clamp(d.ox + dx * scale, 30, VIEW_W - 30), y: clamp(d.oy + dy * scale, 40, VIEW_H - 50) })
   }
-  const onPointerUp = () => {
+  const onPointerUp = (part: Part) => {
+    press(part, false)
     if (drag.current?.moved) suppressClick.current = true
     drag.current = null
   }
@@ -183,14 +217,20 @@ export function Bench({ parts, connecting, error, locked, dispatch, issues = [],
               onClick={(e) => { e.stopPropagation(); onPartClick(part) }}
               onPointerDown={(e) => onPointerDown(e, part)}
               onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp}
-              onPointerCancel={onPointerUp}
+              onPointerUp={() => onPointerUp(part)}
+              onPointerCancel={() => onPointerUp(part)}
+              onPointerLeave={() => press(part, false)}
+              tabIndex={locked && part.kind === 'button' ? 0 : undefined}
+              onKeyDown={(e) => { if (locked && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); press(part, true) } }}
+              onKeyUp={(e) => { if (locked && (e.key === ' ' || e.key === 'Enter')) press(part, false) }}
             >
               {isSel && <rect x="-40" y="-40" width="80" height="96" rx="8" fill="none" className="stroke-accent" strokeWidth="2" strokeDasharray="5 4" />}
               <rect x="-36" y="-36" width="72" height="88" fill="transparent" />
               <PartArt part={part} live={live?.(part) ?? {}} />
               <text y="66" textAnchor="middle" fontSize="11" className="fill-fg-muted">{PART_NAMES_NL[part.kind]}</text>
-              {renderControls?.(part)}
+              {sensors && isAnalog(part.kind) && (
+                <SensorSlider part={part} value={sensors.values[part.id]} onChange={(v) => sensors.onChange(part, v)} />
+              )}
             </g>
           )
         })}
