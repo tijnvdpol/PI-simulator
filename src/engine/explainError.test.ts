@@ -75,7 +75,7 @@ describe('explainError met echte Pyodide-meldingen', () => {
     expect(e.uitleg).toContain('Regel 2')
   })
   it('onbekende fouttypes vallen terug op "Er ging iets mis"', async () => {
-    for (const code of ['1/0', 'from gpiozero import LED\nLED(17)\nLED(17)']) {
+    for (const code of ['1/0']) {
       const { e, raw } = await explain(code)
       expect(e.titel).toBe('Er ging iets mis')
       expect(e.uitleg).toContain('Regel')
@@ -88,6 +88,28 @@ describe('explainError met echte Pyodide-meldingen', () => {
     expect(e.uitleg).toContain('Regel 1')
     expect(e.uitleg).toContain('input()')
     expect(e.uitleg).toContain('direct in je code')
+  })
+  it('dezelfde pin twee keer gebruiken krijgt een eigen uitleg', async () => {
+    const { e } = await explain('from gpiozero import LED\nLED(17)\nLED(17)')
+    expect(e.titel).toBe('Pin al in gebruik')
+    expect(e.uitleg).toContain('Regel 3')
+    expect(e.uitleg).toContain('GPIO17')
+    expect(e.uitleg).toContain('close()')
+  })
+  it('een ontbrekende pin (LED()) krijgt een eigen uitleg', async () => {
+    const { e } = await explain('from gpiozero import LED\nLED()')
+    expect(e.titel).toBe('Pin ontbreekt')
+    expect(e.uitleg).toContain('LED(17)')
+  })
+  it('een gesloten onderdeel gebruiken krijgt een eigen uitleg', async () => {
+    const { e } = await explain('from gpiozero import LED\nl = LED(17)\nl.close()\nl.on()')
+    expect(e.titel).toBe('Onderdeel is gesloten')
+    expect(e.uitleg).toContain('close()')
+  })
+  it('regel undefined (Python None → JS undefined) wordt als "geen regel" behandeld', () => {
+    const e = explainError({ type: 'NameError', message: "name 'x' is not defined", line: undefined as unknown as null, traceback: '' })
+    expect(e.regel).toBeNull()
+    expect(e.uitleg).not.toContain('undefined')
   })
   it('zonder regelnummer geen "Regel null"', () => {
     const e = explainError({ type: 'NameError', message: "name 'x' is not defined", line: null, traceback: '' })
@@ -109,6 +131,13 @@ describe('pin-meldingen', () => {
     const i = explainPinWarning({ code: 'pin-wrong-kind', pin: '17', device: 'LED', found: 'button' })
     expect(i.message).toContain('knop')
     expect(i.message).toContain('led')
+  })
+  it('gereserveerde GPIO0/GPIO1 geven geen "pin ?"', () => {
+    for (const pin of ['0', '1']) {
+      const m = explainPinWarning({ code: 'pin-unconnected', pin, device: 'LED' }).message
+      expect(m).not.toContain('?')
+      expect(m).toContain('gereserveerd')
+    }
   })
   it('MCP3008-kanaal wordt als kanaal genoemd', () => {
     expect(explainPinWarning({ code: 'pin-unconnected', pin: 'CH2', device: 'MCP3008' }).message).toContain('kanaal CH2')

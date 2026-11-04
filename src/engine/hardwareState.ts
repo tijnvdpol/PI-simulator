@@ -64,6 +64,7 @@ export class HardwareState {
   getAdcRaw(c: number): number { return Atomics.load(this.a, ADC + c) }
 
   resetOutputs(): void { this.a.fill(0, OUTPUT, OUTPUT + GPIO_COUNT) }
+  resetButtons(): void { this.a.fill(0, BUTTON, BUTTON + GPIO_COUNT) }
 
   /** Slaapt de aanroepende thread; alleen in de worker gebruiken. */
   sleep(seconds: number): void {

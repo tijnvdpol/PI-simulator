@@ -38,3 +38,15 @@ export const CHIP_RIGHT = ['VDD', 'VREF', 'AGND', 'CLK', 'DOUT', 'DIN', 'CS', 'D
 const LABEL_ROW: Record<string, number> = { VDD: 0, SCLK: 3, MISO: 4, MOSI: 5, CE0: 6, GND: 7 }
 export const chipLabelPin = (label: string): Pt => ({ x: CHIP.x + CHIP.w, y: chipRow(LABEL_ROW[label] ?? 0) })
 export const chipRightPin = (i: number): Pt => ({ x: CHIP.x + CHIP.w, y: chipRow(i) })
+
+// Plekken bovenin de werkbank (buiten de MCP3008-chip) voor onderdelen die met het toetsenbord worden toegevoegd.
+const SLOTS: Pt[] = [
+  ...[100, 240, 370, 650, 790].map((x) => ({ x, y: 120 })),
+  ...[135, 275, 405, 685, 825].map((x) => ({ x, y: 80 })),
+]
+
+/** Eerste vrije plek voor een nieuw onderdeel (zonder slepen). */
+export function defaultDropPosition(parts: Part[]): Pt {
+  const free = SLOTS.find((s) => !parts.some((p) => Math.hypot(p.x - s.x, p.y - s.y) < 40))
+  return free ?? SLOTS[parts.length % SLOTS.length]
+}

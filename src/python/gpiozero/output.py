@@ -7,7 +7,7 @@ from .devices import Device
 class OutputDevice(Device):
     """Een aan/uit-uitgang (LED, Buzzer). `active_high` wordt onthouden maar heeft geen effect in de simulator."""
 
-    def __init__(self, pin=None, *, active_high=True, initial_value=False):
+    def __init__(self, pin=None, *, active_high=True, initial_value=False, pin_factory=None):
         super().__init__(pin)
         self._active_high = active_high
         self._value = False
@@ -25,19 +25,23 @@ class OutputDevice(Device):
         self._blink_left = None
 
     def on(self):
+        self._check_open()
         self._stop_blink()
         self._write(True)
 
     def off(self):
+        self._check_open()
         self._stop_blink()
         self._write(False)
 
     def toggle(self):
+        self._check_open()
         self._stop_blink()
         self._write(not self._value)
 
     @property
     def value(self):
+        self._check_open()
         return 1 if self._value else 0
 
     @value.setter
@@ -53,6 +57,7 @@ class OutputDevice(Device):
         return self._active_high
 
     def blink(self, on_time=1, off_time=1, n=None, background=True):
+        self._check_open()
         self._stop_blink()
         self._blink_left = n
         if background:

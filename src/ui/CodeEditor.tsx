@@ -40,6 +40,7 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function
         extensions: [
           basicSetup, python(), indentUnit.of('    '), keymap.of([indentWithTab]),
           editorTheme, editorHighlight, errorLineField,
+          EditorView.contentAttributes.of({ 'aria-label': 'Python-code' }),
           EditorView.updateListener.of((u) => { if (u.docChanged) onChangeRef.current(u.state.doc.toString()) }),
         ],
       }),

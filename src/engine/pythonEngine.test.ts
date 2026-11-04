@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { HardwareState } from './hardwareState'
 import { PythonEngine, type WorkerLike } from './pythonEngine'
 import type { EngineStatus, FromWorker, ToWorker } from './protocol'
@@ -7,6 +7,7 @@ class FakeWorker implements WorkerLike {
   posted: ToWorker[] = []
   terminated = false
   onmessage: ((e: { data: FromWorker }) => void) | null = null
+  onerror: ((e: unknown) => void) | null = null
   postMessage(m: ToWorker) { this.posted.push(m) }
   terminate() { this.terminated = true }
   emit(data: FromWorker) { this.onmessage?.({ data }) }
@@ -127,5 +128,59 @@ describe('PythonEngine', () => {
     state.setOutput(17, 1) // de oude worker was nog net aan het schrijven
     cur().emit({ type: 'ready' })
     expect(state.getOutput(17)).toBe(0)
+  })
+  it('start en stop zetten ingedrukte knoppen los (geen "blijft ingedrukt" in een nieuwe run)', () => {
+    cur().emit({ type: 'ready' })
+    state.setButtonPressed(2, true)
+    engine.start('x')
+    expect(state.isButtonPressed(2)).toBe(false)
+    state.setButtonPressed(2, true)
+    engine.stop()
+    expect(state.isButtonPressed(2)).toBe(false)
+  })
+  it('een worker die niet laadt (onerror) geeft laadfout in plaats van eeuwig laden', () => {
+    expect(engine.status).toBe('laden')
+    cur().onerror?.(new Error('chunk'))
+    expect(engine.status).toBe('laadfout')
+    engine.retry()
+    expect(workers).toHaveLength(2)
+  })
+  it('onerror van een oude worker wordt genegeerd', () => {
+    const first = cur()
+    first.emit({ type: 'ready' })
+    engine.stop()
+    first.onerror?.(new Error('laat'))
+    expect(engine.status).toBe('laden')
+  })
+})
+
+describe('PythonEngine laad-timeout', () => {
+  beforeEach(() => { vi.useFakeTimers() })
+  afterEach(() => { vi.useRealTimers() })
+  const make = () => {
+    const ws: FakeWorker[] = []
+    const statuses: EngineStatus[] = []
+    const e = new PythonEngine({
+      state: new HardwareState(), createWorker: () => { const w = new FakeWorker(); ws.push(w); return w },
+      onStatus: (s) => statuses.push(s), onOutput: () => {}, onWarn: () => {}, onDone: () => {}, loadTimeoutMs: 1000,
+    })
+    return { e, ws }
+  }
+  it('geen ready binnen de timeout → laadfout', () => {
+    const { e } = make()
+    vi.advanceTimersByTime(1001)
+    expect(e.status).toBe('laadfout')
+  })
+  it('ready op tijd → geen laadfout', () => {
+    const { e, ws } = make()
+    ws[0].emit({ type: 'ready' })
+    vi.advanceTimersByTime(5000)
+    expect(e.status).toBe('klaar')
+  })
+  it('stop/dispose ruimen de timer op', () => {
+    const { e } = make()
+    e.dispose()
+    vi.advanceTimersByTime(5000)
+    expect(e.status).toBe('laden')
   })
 })

@@ -52,3 +52,15 @@ describe('liveControls', () => {
     expect(snap.z.level).toBe(0) // voedingspin: geen GPIO
   })
 })
+
+describe('syncAnalog schrijft nooit een tussenwaarde 0 (kort "−50 °C" in een leeslus)', () => {
+  it('elk kanaal krijgt precies één schrijfactie, met de eindwaarde', () => {
+    const s = new HardwareState()
+    const writes: [number, number][] = []
+    const orig = s.setAdcRaw.bind(s)
+    s.setAdcRaw = (c, raw) => { writes.push([c, raw]); orig(c, raw) }
+    syncAnalog(s, [part({ id: 'a', kind: 'temperature', connection: { type: 'adc', channel: 0 } })], { a: 25 })
+    expect(writes.filter(([c]) => c === 0)).toEqual([[0, celsiusToRaw(25)]])
+    expect(writes).toHaveLength(8)
+  })
+})
