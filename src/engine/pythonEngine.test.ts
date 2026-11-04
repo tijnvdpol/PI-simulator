@@ -111,4 +111,21 @@ describe('PythonEngine', () => {
     cur().emit({ type: 'done', error })
     expect(dones).toEqual([error])
   })
+  it('dispose beëindigt de worker zonder een nieuwe te starten en negeert late berichten', () => {
+    cur().emit({ type: 'ready' })
+    const first = cur()
+    engine.dispose()
+    expect(first.terminated).toBe(true)
+    expect(workers).toHaveLength(1)
+    first.emit({ type: 'stdout', text: 'laat' })
+    expect(outputs).toEqual([])
+  })
+  it('een late schrijfactie van de gestopte worker wordt weggeveegd zodra de nieuwe worker klaar is', () => {
+    cur().emit({ type: 'ready' })
+    engine.start('while True: pass')
+    engine.stop()
+    state.setOutput(17, 1) // de oude worker was nog net aan het schrijven
+    cur().emit({ type: 'ready' })
+    expect(state.getOutput(17)).toBe(0)
+  })
 })

@@ -42,6 +42,12 @@ export class PythonEngine {
     this.spawn()
   }
 
+  /** Ruim alles op (bij het sluiten van de pagina): geen nieuwe worker meer. */
+  dispose(): void {
+    this.worker?.terminate()
+    this.worker = null
+  }
+
   retry(): void {
     if (this.status !== 'laadfout') return
     this.worker?.terminate()
@@ -58,7 +64,7 @@ export class PythonEngine {
 
   private handle(m: FromWorker): void {
     switch (m.type) {
-      case 'ready': this.setStatus('klaar'); break
+      case 'ready': this.o.state.resetOutputs(); this.setStatus('klaar'); break
       case 'load-error': this.setStatus('laadfout'); break
       case 'stdout':
       case 'stderr': this.o.onOutput({ stream: m.type, text: m.text }); break
