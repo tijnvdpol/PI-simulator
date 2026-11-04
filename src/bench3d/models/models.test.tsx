@@ -5,7 +5,7 @@ import { InstancedMesh, Matrix4, Mesh, MeshStandardMaterial, PointLight, Vector3
 import type { Part, PartKind } from '../../project/types'
 import { CHIP_DIM, chipChannelLocal, chipLabelLocal, chipPinLocal } from '../anchors'
 import { PART_ANCHORS } from '../anchors'
-import { HEADER, PI_BOARD, PI_ORIGIN, pinWorld } from '../geometry'
+import { HEADER, PI_BOARD, PI_LIFT, PI_ORIGIN, pinWorld } from '../geometry'
 import { ButtonModel, BUTTON_TRAVEL } from './ButtonModel'
 import { BuzzerModel } from './BuzzerModel'
 import { LedModel } from './LedModel'
@@ -54,7 +54,7 @@ describe('Pi-printplaat', () => {
     for (let n = 1; n <= 40; n++) {
       pins.getMatrixAt(n - 1, m)
       const local = new Vector3().setFromMatrixPosition(m)
-      const world = local.add(new Vector3(PI_ORIGIN.x, 0, PI_ORIGIN.z))
+      const world = local.add(new Vector3(PI_ORIGIN.x, PI_LIFT, PI_ORIGIN.z))
       const want = pinWorld(n)
       expect(world.x).toBeCloseTo(want.x, 4)
       expect(world.z).toBeCloseTo(want.z, 4)

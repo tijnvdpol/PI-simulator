@@ -1,24 +1,32 @@
 /**
  * Maten en plekken van het breadboard in de 3D-werkbank (mm). Zuivere functies, zonder three.
- * Assen: x = rechts, y = omhoog (tafel op 0), z = naar de kijker toe. Het breadboard ligt achter de Pi.
+ * Assen: x = rechts, y = omhoog (tafel op 0), z = naar de kijker toe. Het breadboard ligt links van de Pi, de MCP3008-module rechts.
  */
 import { COLS, RAIL_LEN, parseTerminal, type RailName } from '../../circuit/breadboard'
 import { fits, legPlaces } from '../../circuit/parts'
 import type { ProKind, Rot } from '../../circuit/types'
-import { pinWorld } from '../geometry'
+import { PI_BOARD, PI_ORIGIN, pinWorld } from '../geometry'
 
 export const P = 2.54
-export const BB_CENTER = { x: 0, z: -50 }
+/** Pi, breadboard en MCP3008-module liggen naast elkaar op de mat (nooit over elkaar), met ruimte voor draden ertussen. */
+const PI_CENTER_Z = PI_ORIGIN.z + PI_BOARD.depth / 2
+const GAP = { bbPi: 14, piMcp: 12 }
+export const BB_CENTER = { x: PI_ORIGIN.x - GAP.bbPi - 41, z: PI_CENTER_Z }
 export const BB_TOP = 8.5
 export const BB_SIZE = { w: 82, d: 58 }
 /** De MCP3008-module met 8 kanaalaansluitingen, rechts van het breadboard. */
-export const MCP_CENTER = { x: 70, z: -50 }
+export const MCP_CENTER = { x: PI_ORIGIN.x + PI_BOARD.width + GAP.piMcp + 8, z: PI_CENTER_Z }
 export const MCP_TOP = 6
 export const MCP_SIZE = { w: 16, d: 46 }
 export const CH_PITCH = 5.08
 
 /** Tafel in de pro-modus: groter dan de simpele tafel, zodat Pi, breadboard en module erop passen. */
-export const PRO_TABLE = { width: 170, depth: 150, cx: 15, cz: -20 }
+export const PRO_TABLE = {
+  width: PI_BOARD.width + 82 + 16 + GAP.bbPi + GAP.piMcp + 10,
+  depth: 90,
+  cx: (BB_CENTER.x - 41 + MCP_CENTER.x + 8) / 2,
+  cz: PI_CENTER_Z,
+}
 
 export interface XYZ { x: number; y: number; z: number }
 

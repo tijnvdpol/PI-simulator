@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { ExtrudeGeometry, Path, Shape } from 'three'
-import { HEADER, PI_BOARD, PI_ORIGIN, PITCH } from '../geometry'
+import { HEADER, PI_BOARD, PI_LIFT, PI_ORIGIN, PITCH } from '../geometry'
 import { usePalette, type PaletteToken } from '../palette'
 import { PinHeader, type PinHeaderProps } from './PinHeader'
 
@@ -41,7 +41,14 @@ export function PiBoardModel(props: PinHeaderProps) {
   const geometry = useMemo(() => new ExtrudeGeometry(boardShape(), { depth: PI_BOARD.thickness, bevelEnabled: false, curveSegments: 6 }), [])
   const headerCenterU = HEADER.firstU + (19 * PITCH) / 2
   return (
-    <group name="pi-board" position={[PI_ORIGIN.x, 0, PI_ORIGIN.z]}>
+    <group name="pi-board" position={[PI_ORIGIN.x, PI_LIFT, PI_ORIGIN.z]}>
+      {/* vier rubber voetjes onder de montagegaten: de printplaat zweeft een paar mm boven de mat */}
+      {PI_BOARD.holes.map((h, i) => (
+        <mesh key={i} name="foot" position={[h.u, -PI_LIFT / 2, h.v]} castShadow receiveShadow>
+          <cylinderGeometry args={[3, 3.4, PI_LIFT, 20]} />
+          <meshStandardMaterial color={p.ink} roughness={0.85} />
+        </mesh>
+      ))}
       {/* De vorm ligt in het xy-vlak; kantelen zodat v naar +z loopt en de plaat van y = 0 tot y = dikte staat. */}
       <mesh geometry={geometry} rotation={[Math.PI / 2, 0, 0]} position={[0, PI_BOARD.thickness, 0]} castShadow receiveShadow>
         <meshStandardMaterial color={p.board} roughness={0.55} />

@@ -207,7 +207,7 @@ export function Workshop({ center, area = { w: TABLE_W, d: TABLE_D } }: { center
         decay={2}
         color={p['lamp-glow']}
         castShadow
-        shadow-mapSize={high ? [2048, 2048] : [1024, 1024]}
+        shadow-mapSize={high ? [2048, 2048] : [512, 512]}
         shadow-radius={high ? 7 : 1}
         shadow-bias={-0.0004}
         shadow-normalBias={0.4}
@@ -215,7 +215,7 @@ export function Workshop({ center, area = { w: TABLE_W, d: TABLE_D } }: { center
         shadow-camera-far={520}
       />
       <Suspense fallback={null}>
-        <Environment files={HDRI_URL} background backgroundBlurriness={0.55} backgroundIntensity={0.45} environmentIntensity={0.55} />
+        <Environment files={HDRI_URL} background={high} backgroundBlurriness={0.55} backgroundIntensity={0.45} environmentIntensity={0.55} />
       </Suspense>
       {high && <ContactShadows position={[cx, 0.06, cz]} scale={[area.w + 60, area.d + 60]} opacity={0.55} blur={2.4} far={22} resolution={1024} color={p.ink} />}
     </>

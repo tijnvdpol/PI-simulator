@@ -59,9 +59,12 @@ export function worldToSvg(x: number, z: number): { x: number; y: number } {
 /** Linkerbovenhoek van de Pi in wereldcoördinaten (de Pi staat op dezelfde plek als in de 2D-opstelling). */
 export const PI_ORIGIN = svgToWorld(BOARD_POS.x, BOARD_POS.y)
 
-/** Van printplaat-mm naar wereld op het bovenvlak van de printplaat. */
+/** De Pi staat op vier rubber voetjes: zo hoog (mm) zweeft de printplaat boven de mat. */
+export const PI_LIFT = 3
+
+/** Van printplaat-mm naar wereld op het bovenvlak van de printplaat (inclusief de voetjes). */
 export function boardToWorld(u: number, v: number, height: number = PI_BOARD.thickness) {
-  return { x: PI_ORIGIN.x + u, y: height, z: PI_ORIGIN.z + v }
+  return { x: PI_ORIGIN.x + u, y: height + PI_LIFT, z: PI_ORIGIN.z + v }
 }
 
 /** Waar een draad aan een pin vastzit: de punt van de pin. */
