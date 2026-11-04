@@ -52,16 +52,32 @@ export interface Harness {
 }
 
 let pyodidePromise: Promise<PyodideInterface> | undefined
+let current: FakeBridge
 
-/** Pyodide laadt één keer per testbestand; elke harnas krijgt een eigen brug. */
+// `_hw` wordt maar één keer geregistreerd (Python bewaart de module); deze brug wijst naar de huidige FakeBridge.
+const delegate: HardwareBridge = {
+  now: () => current.now(),
+  sleep: (s) => current.sleep(s),
+  partKindAtGpio: (g) => current.partKindAtGpio(g),
+  partKindAtChannel: (c) => current.partKindAtChannel(c),
+  readButton: (g) => current.readButton(g),
+  writeOutput: (g, l) => current.writeOutput(g, l),
+  readAdc: (c) => current.readAdc(c),
+  warn: (code, info) => current.warn(code, info),
+}
+
+/** Pyodide laadt één keer per testbestand; elke harnas krijgt een eigen brug en schone Python-toestand. */
 export async function createHarness(opts: { t0?: number } = {}): Promise<Harness> {
-  pyodidePromise ??= loadPyodide({ indexURL: resolve('node_modules/pyodide') + '/' })
+  if (!pyodidePromise) {
+    pyodidePromise = loadPyodide({ indexURL: resolve('node_modules/pyodide') + '/' }).then((p) => { bootPython(p, delegate); return p })
+  }
   const pyodide = await pyodidePromise
   const bridge = new FakeBridge(opts.t0 ?? 0)
+  current = bridge
   const stdout: string[] = []
   pyodide.setStdout({ batched: (s) => stdout.push(s) })
   pyodide.setStderr({ batched: (s) => stdout.push(s) })
-  bootPython(pyodide, bridge)
+  pyodide.runPython('import pisim.runtime; pisim.runtime.reset()')
   return {
     bridge,
     stdout,
@@ -74,7 +90,7 @@ export async function createHarness(opts: { t0?: number } = {}): Promise<Harness
         const message = String((e as Error).message ?? e)
         const last = message.trim().split('\n').pop() ?? ''
         const m = /^([\w.]+):\s?(.*)$/.exec(last)
-        return { error: { type: m?.[1] ?? 'Error', message: m?.[2] ?? last, line: null, traceback: message } }
+        return { error: { type: (m?.[1] ?? 'Error').split('.').pop()!, message: m?.[2] ?? last, line: null, traceback: message } }
       }
     },
   }

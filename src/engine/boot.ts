@@ -6,4 +6,5 @@ import { installPythonFiles } from './pythonFiles'
 export function bootPython(pyodide: PyodideInterface, bridge: HardwareBridge): void {
   pyodide.registerJsModule('_hw', bridge as unknown as Record<string, unknown>)
   installPythonFiles(pyodide)
+  pyodide.runPython('import pisim.patch\npisim.patch.install()')
 }
